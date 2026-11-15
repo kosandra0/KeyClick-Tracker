@@ -15,7 +15,7 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "1.2.0"
+	appVersion = "1.2.2"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"

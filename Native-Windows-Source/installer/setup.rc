@@ -1,0 +1,3 @@
+// Setup program resources: application icon (id 1) and an administrator manifest.
+1 ICON "../app.ico"
+1 24 "setup.manifest"

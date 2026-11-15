@@ -1,6 +1,25 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '1.2.2', date: '2026-11-15', title: 'Counts administrator windows, starts at sign-in, now with a setup program',
+    intro: 'The real reason keys and clicks were missed in PowerShell and Notepad was found: those windows were running as administrator, and Windows hides administrator windows from normal programs. KeyClick Tracker now runs as administrator too. Your data is backed up before this update runs and is kept.',
+    items: [
+      ['fixed', 'Keys, clicks and scrolls typed into windows that run as administrator (for example PowerShell or Notepad opened from an administrator PowerShell) were never counted. The app now runs with administrator rights, so it counts input everywhere. Windows will ask for permission when you open the app yourself. At sign-in it starts without a prompt.'],
+      ['fixed', 'The app did not start when the computer was turned on. The startup entry pointed at a program file that no longer existed, and a normal startup entry cannot start an administrator program anyway. Start with Windows now uses a sign-in task, and the app repairs the entry every time it opens.'],
+      ['new', 'Setup program. KeyClick Tracker now installs to Program Files with a Start Menu shortcut and an entry in Apps and features, so it can be uninstalled cleanly. Your data stays in place when you update or uninstall.'],
+      ['fixed', 'Opening a second copy while one is running now simply does nothing instead of starting a second counter that doubled the counts.'],
+    ],
+  },
+  {
+    version: '1.2.1', date: '2026-11-15', title: 'Counting in every app, and a steady Little observations list',
+    intro: 'Keys, clicks and scrolls are now counted wherever you are working, including PowerShell and Notepad. The Little observations list on Overview no longer blinks while you work. Your data is backed up before this update runs and is kept.',
+    items: [
+      ['fixed', 'Keys, clicks and scrolls were not counted in some windows, such as PowerShell and Notepad. Input is now read with Windows Raw Input, which receives input from every application whatever has focus, and Windows does not switch it off for being slow. The earlier hook listener is no longer used.'],
+      ['changed', 'Input sent by programs (for example automation tools) is now counted too, because Raw Input cannot tell it apart from your own keys and mouse.'],
+      ['fixed', 'The Little observations list on Overview no longer blinks and replays its animation on every key, click or scroll. Its rows now update in place and only animate when the set of observations changes.'],
+    ],
+  },
+  {
     version: '1.2.0', date: '2026-11-15', title: 'Reliable counting and a themed live box',
     intro: 'Counting no longer stops silently in some apps, the live box stays visible, and it has its own themes. Your data is backed up before this update runs and is kept.',
     items: [

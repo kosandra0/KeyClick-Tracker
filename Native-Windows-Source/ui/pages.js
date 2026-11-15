@@ -148,7 +148,7 @@
     const t = A().today || {}, st = state.settings;
     return '<div class="goal-row">' + ring('Keys today', n0(t.keys), st.goal_keys, 'var(--accent)') + ring('Clicks today', n0(t.clicks), st.goal_clicks, 'var(--accent2)') + '</div>';
   }
-  function insightsHTML() {
+  function insightItems() {
     const s = S(), a = A(), out = [];
     const t = a.today || {}, tot = s.totals || {};
     const words = Math.round(n0(tot.chars) / 5);
@@ -161,7 +161,28 @@
     const r = s.rates || {};
     if (n0(r.avgWpm)) out.push(['speed', 'Your typing pace averages <b>' + KC.rate(r.avgWpm, 'w', 1) + ' ' + KC.unitLabel('w') + '</b>, with a best minute of ' + KC.rate(r.peakWpm, 'w', 1) + '.', 'Based on ' + fmt(r.typeMinutes) + ' typing minutes.']);
     if (words) out.push(['log', 'You have typed roughly <b>' + fmt(words) + ' words</b> in this period.', 'About ' + fmt(Math.max(1, Math.round(words / 250))) + ' pages of text.']);
-    return '<div class="insight-list">' + out.slice(0, 6).map((x, i) => '<div class="insight-row" style="--i:' + i + '"><span class="insight-icon">' + svg(x[0]) + '</span><div><p>' + x[1] + '</p>' + (x[2] ? '<small>' + x[2] + '</small>' : '') + '</div></div>').join('') + '</div>';
+    return out.slice(0, 6);
+  }
+  /* Little observations keep their rows. The list is rebuilt only when the set of findings
+     changes (by icon); the wording is patched in place, so live counting never replays the
+     entrance animation (that replay was the blinking reported on 2026-11-15). */
+  function patchInsights(box) {
+    if (!box) return;
+    const items = insightItems();
+    const sig = items.map(x => x[0]).join('|');
+    if (box._sig !== sig) {
+      const first = box._sig === undefined;
+      box._sig = sig;
+      box.innerHTML = '<div class="insight-list">' + items.map((x, i) => '<div class="insight-row' + (first ? '' : ' still') + '" style="--i:' + i + '"><span class="insight-icon">' + svg(x[0]) + '</span><div><p></p><small></small></div></div>').join('') + '</div>';
+    }
+    box.querySelectorAll('.insight-row').forEach((row, i) => {
+      const x = items[i]; if (!x) return;
+      const p = row.querySelector('p'), small = row.querySelector('small');
+      if (p.dataset.h !== x[1]) { p.dataset.h = x[1]; p.innerHTML = x[1]; }
+      const sub = x[2] || '';
+      if (small.dataset.h !== sub) { small.dataset.h = sub; small.textContent = sub; }
+      small.style.display = sub ? '' : 'none';
+    });
   }
   function badgesHTML() {
     const a = A(), tot = a.totals || {}, st = a.streak || {}, pk = (S().rates || {}).peakWpm || 0;
@@ -224,7 +245,7 @@
     update(root) {
       drawChart($('#main-chart', root));
       setHTML($('#goals', root), goalsHTML());
-      setHTML($('#insights', root), insightsHTML());
+      patchInsights($('#insights', root));
       setHTML($('#badges', root), badgesHTML());
       updateHeat(root);
       const sk = $('#sub-keys', root); if (sk) sk.textContent = fmt(n0(S().totals.words)) + ' words typed';

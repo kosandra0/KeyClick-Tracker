@@ -17,8 +17,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"golang.org/x/sys/windows/registry"
 )
 
 //go:embed ui
@@ -369,38 +367,6 @@ func importData(in *Store, mode string) (added, updated, days int, backup string
 		}
 	}
 	return
-}
-
-// ---------------------------------------------------------------- startup key
-
-const runKey = `Software\Microsoft\Windows\CurrentVersion\Run`
-
-func startupEnabled() bool {
-	k, err := registry.OpenKey(registry.CURRENT_USER, runKey, registry.QUERY_VALUE)
-	if err != nil {
-		return false
-	}
-	defer k.Close()
-	_, _, err = k.GetStringValue("KeyClickTracker")
-	return err == nil
-}
-func setStartup(on bool) error {
-	k, _, err := registry.CreateKey(registry.CURRENT_USER, runKey, registry.SET_VALUE)
-	if err != nil {
-		return err
-	}
-	defer k.Close()
-	if !on {
-		if e := k.DeleteValue("KeyClickTracker"); e != nil && e != registry.ErrNotExist {
-			return e
-		}
-		return nil
-	}
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	return k.SetStringValue("KeyClickTracker", `"`+exe+`" --background`)
 }
 
 // -------------------------------------------------------------------- handler

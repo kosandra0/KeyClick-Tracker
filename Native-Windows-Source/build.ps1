@@ -1,6 +1,6 @@
 # Builds "KeyClick Tracker.exe" into the parent folder.
 # Uses the portable Go in ..\_tools\go when present, otherwise the Go on PATH.
-param([string]$Out = '..\KeyClick-Tracker-v1.2.0.exe')
+param([string]$Out = '')   # default: ..\KeyClick-Tracker-Setup-v<version>.exe
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 $tools = Join-Path (Split-Path $PSScriptRoot -Parent) '_tools'
@@ -24,7 +24,39 @@ $windres = (Get-Command windres -ErrorAction Stop).Source
 & $windres -O coff -F pe-x86-64 -o rsrc_windows_amd64.syso app.rc
 if ($LASTEXITCODE -ne 0) { throw 'windres failed' }
 
-& $goExe build -trimpath -ldflags '-s -w -H windowsgui' -o $Out .
-if ($LASTEXITCODE -ne 0) { throw 'go build failed' }
+# The version comes from store.go so the app, the setup program and the update log agree.
+$ver = [regex]::Match((Get-Content 'store.go' -Raw), 'appVersion\s*=\s*"([^"]+)"').Groups[1].Value
+if (-not $ver) { throw 'appVersion not found in store.go' }
+# Output folders (project root\installers): one folder for the setup program, one for the
+# standalone app. Each build replaces the previous file in its folder.
+$instRoot   = Join-Path (Split-Path $PSScriptRoot -Parent) 'installers'
+$setupDir   = Join-Path $instRoot 'Setup'
+$standDir   = Join-Path $instRoot 'Standalone'
+if (-not $Out) { $Out = Join-Path $setupDir "KeyClick-Tracker-Setup-v$ver.exe" }
+New-Item -ItemType Directory -Force $setupDir, $standDir | Out-Null
+
+# 1. The app. It is embedded in the setup program and also copied to the Standalone folder.
+$payload = 'installer\payload\KeyClick-Tracker.exe'
+New-Item -ItemType Directory -Force 'installer\payload' | Out-Null
+& $goExe build -trimpath -ldflags '-s -w -H windowsgui' -o $payload .
+if ($LASTEXITCODE -ne 0) { throw 'go build (app) failed' }
+$p = Get-Item $payload
+Write-Host ("App   {0:N0} bytes SHA-256 {1}" -f $p.Length, (Get-FileHash $p.FullName -Algorithm SHA256).Hash)
+Get-ChildItem $standDir -Filter '*.exe' | Remove-Item -Force
+$standOut = Join-Path $standDir "KeyClick-Tracker-v$ver.exe"
+Copy-Item $payload $standOut -Force
+
+# 2. The setup program (administrator manifest and icon come from installer\setup.rc).
+Push-Location installer
+& $windres -O coff -F pe-x86-64 -o rsrc_windows_amd64.syso setup.rc
+$wr = $LASTEXITCODE
+Pop-Location
+if ($wr -ne 0) { throw 'windres (setup) failed' }
+& $goExe build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$ver" -o $Out ./installer
+if ($LASTEXITCODE -ne 0) { throw 'go build (setup) failed' }
+Remove-Item $payload -Force
+Get-ChildItem $setupDir -Filter '*.exe' | Where-Object { $_.FullName -ne (Resolve-Path -LiteralPath $Out -ErrorAction SilentlyContinue).Path } | Remove-Item -Force
 $f = Get-Item $Out
-Write-Host ("Built {0} ({1:N0} bytes) SHA-256 {2}" -f $f.FullName, $f.Length, (Get-FileHash $f.FullName -Algorithm SHA256).Hash)
+Write-Host ("Setup {0} ({1:N0} bytes) SHA-256 {2}" -f $f.FullName, $f.Length, (Get-FileHash $f.FullName -Algorithm SHA256).Hash)
+$s = Get-Item $standOut
+Write-Host ("Standalone {0} ({1:N0} bytes) SHA-256 {2}" -f $s.FullName, $s.Length, (Get-FileHash $s.FullName -Algorithm SHA256).Hash)

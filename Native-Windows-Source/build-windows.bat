@@ -9,5 +9,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo.
-echo Build finished. The program is KeyClick-Tracker.exe in the parent folder.
+echo Build finished. The setup program is KeyClick-Tracker-Setup-v(version).exe in the parent folder.
 pause

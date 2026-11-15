@@ -214,6 +214,7 @@ html.no-anim *,html.no-anim *::before,html.no-anim *::after{animation:none !impo
 .goal-item .gv{font-size:.92em;margin-top:5px;font-variant-numeric:tabular-nums}
 .insight-list{display:flex;flex-direction:column;gap:14px}
 .insight-row{display:flex;gap:12px;align-items:flex-start;animation:rise .5s var(--ease) both;animation-delay:calc(var(--i,0) * 70ms)}
+.insight-row.still{animation:none}
 .insight-icon{width:30px;height:30px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;flex:0 0 auto;padding:7px}
 .insight-icon svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .insight-row p{margin:0;line-height:1.5;font-size:.92em}

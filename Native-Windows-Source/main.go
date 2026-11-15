@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -23,80 +22,83 @@ var (
 	shell32  = syscall.NewLazyDLL("shell32.dll")
 	gdi32    = syscall.NewLazyDLL("gdi32.dll")
 
-	pRegisterClassExW      = user32.NewProc("RegisterClassExW")
-	pCreateWindowExW       = user32.NewProc("CreateWindowExW")
-	pDefWindowProcW        = user32.NewProc("DefWindowProcW")
-	pGetMessageW           = user32.NewProc("GetMessageW")
-	pTranslateMessage      = user32.NewProc("TranslateMessage")
-	pDispatchMessageW      = user32.NewProc("DispatchMessageW")
-	pPostQuitMessage       = user32.NewProc("PostQuitMessage")
-	pPostMessageW          = user32.NewProc("PostMessageW")
-	pSendMessageW          = user32.NewProc("SendMessageW")
-	pLoadCursorW           = user32.NewProc("LoadCursorW")
-	pLoadImageW            = user32.NewProc("LoadImageW")
-	pDestroyWindow         = user32.NewProc("DestroyWindow")
-	pSetTimer              = user32.NewProc("SetTimer")
-	pSetWindowsHookExW     = user32.NewProc("SetWindowsHookExW")
-	pUnhookWindowsHookEx   = user32.NewProc("UnhookWindowsHookEx")
-	pCallNextHookEx        = user32.NewProc("CallNextHookEx")
-	pGetCursorPos          = user32.NewProc("GetCursorPos")
-	pCreatePopupMenu       = user32.NewProc("CreatePopupMenu")
-	pAppendMenuW           = user32.NewProc("AppendMenuW")
-	pTrackPopupMenu        = user32.NewProc("TrackPopupMenu")
-	pDestroyMenu           = user32.NewProc("DestroyMenu")
-	pSetForegroundWindow   = user32.NewProc("SetForegroundWindow")
-	pMessageBoxW           = user32.NewProc("MessageBoxW")
-	pFindWindowW           = user32.NewProc("FindWindowW")
-	pShowWindow            = user32.NewProc("ShowWindow")
-	pSetWindowLongPtrW     = user32.NewProc("SetWindowLongPtrW")
-	pGetWindowLongPtrW     = user32.NewProc("GetWindowLongPtrW")
-	pCallWindowProcW       = user32.NewProc("CallWindowProcW")
-	pSetWindowPos          = user32.NewProc("SetWindowPos")
-	pGetWindowRect         = user32.NewProc("GetWindowRect")
-	pSetWindowRgn          = user32.NewProc("SetWindowRgn")
-	pReleaseCapture        = user32.NewProc("ReleaseCapture")
-	pIsZoomed              = user32.NewProc("IsZoomed")
-	pIsWindowVisible       = user32.NewProc("IsWindowVisible")
-	pGetDpiForWindow       = user32.NewProc("GetDpiForWindow")
-	pGetSystemMetrics      = user32.NewProc("GetSystemMetrics")
-	pGetSystemMetricsForDp = user32.NewProc("GetSystemMetricsForDpi")
-	pCreateRoundRectRgn    = gdi32.NewProc("CreateRoundRectRgn")
-	pGetModuleHandleW      = kernel32.NewProc("GetModuleHandleW")
-	pGetLastError          = kernel32.NewProc("GetLastError")
-	pCreateMutexW          = kernel32.NewProc("CreateMutexW")
-	pShellNotifyIconW      = shell32.NewProc("Shell_NotifyIconW")
-	pShellExecuteW         = shell32.NewProc("ShellExecuteW")
+	pRegisterClassExW        = user32.NewProc("RegisterClassExW")
+	pCreateWindowExW         = user32.NewProc("CreateWindowExW")
+	pDefWindowProcW          = user32.NewProc("DefWindowProcW")
+	pGetMessageW             = user32.NewProc("GetMessageW")
+	pTranslateMessage        = user32.NewProc("TranslateMessage")
+	pDispatchMessageW        = user32.NewProc("DispatchMessageW")
+	pPostQuitMessage         = user32.NewProc("PostQuitMessage")
+	pPostMessageW            = user32.NewProc("PostMessageW")
+	pSendMessageW            = user32.NewProc("SendMessageW")
+	pLoadCursorW             = user32.NewProc("LoadCursorW")
+	pLoadImageW              = user32.NewProc("LoadImageW")
+	pDestroyWindow           = user32.NewProc("DestroyWindow")
+	pSetTimer                = user32.NewProc("SetTimer")
+	pRegisterRawInputDevices = user32.NewProc("RegisterRawInputDevices")
+	pGetRawInputData         = user32.NewProc("GetRawInputData")
+	pGetCursorPos            = user32.NewProc("GetCursorPos")
+	pCreatePopupMenu         = user32.NewProc("CreatePopupMenu")
+	pAppendMenuW             = user32.NewProc("AppendMenuW")
+	pTrackPopupMenu          = user32.NewProc("TrackPopupMenu")
+	pDestroyMenu             = user32.NewProc("DestroyMenu")
+	pSetForegroundWindow     = user32.NewProc("SetForegroundWindow")
+	pMessageBoxW             = user32.NewProc("MessageBoxW")
+	pFindWindowW             = user32.NewProc("FindWindowW")
+	pShowWindow              = user32.NewProc("ShowWindow")
+	pSetWindowLongPtrW       = user32.NewProc("SetWindowLongPtrW")
+	pGetWindowLongPtrW       = user32.NewProc("GetWindowLongPtrW")
+	pCallWindowProcW         = user32.NewProc("CallWindowProcW")
+	pSetWindowPos            = user32.NewProc("SetWindowPos")
+	pGetWindowRect           = user32.NewProc("GetWindowRect")
+	pSetWindowRgn            = user32.NewProc("SetWindowRgn")
+	pReleaseCapture          = user32.NewProc("ReleaseCapture")
+	pIsZoomed                = user32.NewProc("IsZoomed")
+	pIsWindowVisible         = user32.NewProc("IsWindowVisible")
+	pGetDpiForWindow         = user32.NewProc("GetDpiForWindow")
+	pGetSystemMetrics        = user32.NewProc("GetSystemMetrics")
+	pGetSystemMetricsForDp   = user32.NewProc("GetSystemMetricsForDpi")
+	pCreateRoundRectRgn      = gdi32.NewProc("CreateRoundRectRgn")
+	pGetModuleHandleW        = kernel32.NewProc("GetModuleHandleW")
+	pGetLastError            = kernel32.NewProc("GetLastError")
+	pCreateMutexW            = kernel32.NewProc("CreateMutexW")
+	pShellNotifyIconW        = shell32.NewProc("Shell_NotifyIconW")
+	pShellExecuteW           = shell32.NewProc("ShellExecuteW")
 )
 
 const (
-	whKeyboardLL = 13
-	whMouseLL    = 14
-	wmKeyDown    = 0x0100
-	wmKeyUp      = 0x0101
-	wmSysKeyDown = 0x0104
-	wmSysKeyUp   = 0x0105
-	wmLButton    = 0x0201
-	wmRButton    = 0x0204
-	wmMButton    = 0x0207
-	wmXButton    = 0x020B
-	wmMouseWheel = 0x020A
-	wmMouseHWhl  = 0x020E
-	wmDestroy    = 0x0002
-	wmTimer      = 0x0113
-	wmSize       = 0x0005
-	wmClose      = 0x0010
-	wmEndSession = 0x0016
-	wmGetMinMax  = 0x0024
-	wmNCCalcSize = 0x0083
-	wmNCLButton  = 0x00A1
-	wmSetIcon    = 0x0080
-	wmApp        = 0x8000
-	wmTray       = wmApp + 17
-	wmOpen       = wmApp + 18
-	wmExit       = wmApp + 19
-	wmLBtnDbl    = 0x0203
-	wmRButtonUp  = 0x0205
-	wmContextMen = 0x007B
+	wmInput         = 0x00FF // WM_INPUT: Raw Input message
+	ridInput        = 0x10000003
+	rimTypeMouse    = 0
+	rimTypeKeyboard = 1
+	usageKeyboard   = 6
+	usageMouse      = 2
+	ridevInputSink  = 0x00000100
+	ridevRemove     = 0x00000001
+	riKeyBreak      = 0x01 // RI_KEY_BREAK: key release
+	rmbLeftDown     = 0x0001
+	rmbRightDown    = 0x0004
+	rmbMiddleDown   = 0x0010
+	rmbX1Down       = 0x0040
+	rmbX2Down       = 0x0100
+	rmbWheel        = 0x0400
+	rmbHWheel       = 0x0800
+	wmDestroy       = 0x0002
+	wmTimer         = 0x0113
+	wmSize          = 0x0005
+	wmClose         = 0x0010
+	wmEndSession    = 0x0016
+	wmGetMinMax     = 0x0024
+	wmNCCalcSize    = 0x0083
+	wmNCLButton     = 0x00A1
+	wmSetIcon       = 0x0080
+	wmApp           = 0x8000
+	wmTray          = wmApp + 17
+	wmOpen          = wmApp + 18
+	wmExit          = wmApp + 19
+	wmLBtnDbl       = 0x0203
+	wmRButtonUp     = 0x0205
+	wmContextMen    = 0x007B
 
 	nimAdd, nimModify, nimDelete = 0, 1, 2
 	nifMessage, nifIcon, nifTip  = 1, 2, 4
@@ -107,8 +109,6 @@ const (
 	swHide, swShow, swNormal     = 0, 5, 1
 	swMinimize, swMaximize       = 6, 3
 	swRestore                    = 9
-	llkhfInjected, llkhfLowerIL  = 0x10, 0x02
-	llmhfInjected, llmhfLowerIL  = 0x01, 0x02
 
 	gwlStyle        = -16
 	gwlpWndProc     = -4
@@ -195,10 +195,10 @@ var (
 	hostHWND, mainHWND, oldMainProc uintptr
 	appInstance                     uintptr
 	trayAdded                       bool
-	hookKeyboard, hookMouse         uintptr
 	hostCallback, mainCallback      uintptr
 	pausedFlag                      atomic.Bool
-	hookMu                          sync.Mutex // guards hookKeyboard / hookMouse
+	rawOK                           atomic.Bool          // true while Raw Input is registered (reported as "recording")
+	rawCallback, inputWnd           uintptr              // input thread only: window procedure and hidden window
 	pressedAt                       = map[uint32]int64{} // hook thread only: last key-down time per key
 	hookEvents                      = make(chan hookEvent, 8192)
 	exiting                         bool
@@ -215,11 +215,7 @@ func fixed(dst []uint16, s string) {
 }
 func isPaused() bool   { return pausedFlag.Load() }
 func setPaused(v bool) { pausedFlag.Store(v) }
-func hooksOK() bool {
-	hookMu.Lock()
-	defer hookMu.Unlock()
-	return hookKeyboard != 0 && hookMouse != 0
-}
+func hooksOK() bool    { return rawOK.Load() }
 func abs(v int) int {
 	if v < 0 {
 		return -v
@@ -275,93 +271,63 @@ func keyName(vk, scan, flags uint32) string {
 	return fmt.Sprintf("VK_%02X", vk)
 }
 
-// ---------------------------------------------------------------- input hooks
+// ------------------------------------------------------------- input (Raw Input)
 
-// hookEvent is one physical input, queued by the hook callbacks and recorded by recorder().
+// Input is read with Raw Input (RegisterRawInputDevices) instead of the low-level
+// keyboard/mouse hooks. Raw Input is delivered to a hidden window for keyboard and mouse
+// input from every application, whatever has focus, and Windows never removes it for
+// being slow. The old WH_KEYBOARD_LL / WH_MOUSE_LL hooks could be silently dropped by
+// Windows when a callback ran past its timeout, which stopped counting until restart.
+// Raw Input does not tell injected input (SendInput) apart from physical input, so
+// injected events are counted too (deliberate change in v1.2.1).
+
+// rawDevice is RAWINPUTDEVICE (usage page/usage, flags, target window).
+type rawDevice struct {
+	UsagePage, Usage uint16
+	Flags            uint32
+	Target           uintptr
+}
+
+// rawHeader is RAWINPUTHEADER; the device data follows it.
+type rawHeader struct {
+	Type, Size uint32
+	Device     uintptr
+	Param      uintptr
+}
+
+// rawKeyboard is the RAWKEYBOARD part of RAWINPUT.
+type rawKeyboard struct {
+	MakeCode, Flags, Reserved, VKey uint16
+	Message, Extra                  uint32
+}
+
+// rawMouse is the RAWMOUSE part of RAWINPUT (ButtonFlags/ButtonData share the union slot).
+type rawMouse struct {
+	Flags       uint16
+	_           uint16
+	ButtonFlags uint16
+	ButtonData  uint16
+	RawButtons  uint32
+	LastX       int32
+	LastY       int32
+	Extra       uint32
+}
+
+// hookEvent is one physical input, queued by the input handler and recorded by recorder().
 type hookEvent struct {
 	kind, id string
 	units    uint64
 }
 
-// queueEvent never blocks: Windows silently removes a low-level hook whose callback
-// takes longer than its timeout (about 300 ms), which is why counting used to stop.
-// The callbacks only enqueue; all locking and file-related work happens in recorder().
+// queueEvent never blocks: the input handler must return quickly, and recorder() does the work.
 func queueEvent(kind, id string, units uint64) {
 	select {
 	case hookEvents <- hookEvent{kind, id, units}:
-	default: // queue full (should never happen): drop rather than stall the hook
+	default: // queue full (should never happen): drop rather than stall
 	}
 }
 
-// repeatGapNS: a key that is still held sends auto-repeat key-downs well inside this
-// gap. A key-down after a longer pause is a new press, even if its release was missed.
-const repeatGapNS = int64(1500 * time.Millisecond)
-
-func keyboardProc(nCode int, wParam, lParam uintptr) uintptr {
-	if nCode >= 0 && !isPaused() {
-		k := (*keyboardLL)(unsafe.Pointer(lParam))
-		if k.Flags&(llkhfInjected|llkhfLowerIL) == 0 {
-			down := wParam == wmKeyDown || wParam == wmSysKeyDown
-			up := wParam == wmKeyUp || wParam == wmSysKeyUp
-			if down {
-				now := time.Now().UnixNano()
-				last, held := pressedAt[k.VKCode]
-				if !held || now-last > repeatGapNS {
-					queueEvent("key", keyName(k.VKCode, k.ScanCode, k.Flags), 0)
-				}
-				pressedAt[k.VKCode] = now
-			} else if up {
-				delete(pressedAt, k.VKCode)
-			}
-		}
-	}
-	r, _, _ := pCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
-	return r
-}
-
-func mouseProc(nCode int, wParam, lParam uintptr) uintptr {
-	if nCode >= 0 && !isPaused() {
-		m := (*mouseLL)(unsafe.Pointer(lParam))
-		if m.Flags&(llmhfInjected|llmhfLowerIL) == 0 {
-			switch wParam {
-			case wmLButton:
-				queueEvent("mouse", "left", 0)
-			case wmRButton:
-				queueEvent("mouse", "right", 0)
-			case wmMButton:
-				queueEvent("mouse", "middle", 0)
-			case wmXButton:
-				switch uint16(m.MouseData >> 16) {
-				case 1:
-					queueEvent("mouse", "x1", 0)
-				case 2:
-					queueEvent("mouse", "x2", 0)
-				}
-			case wmMouseWheel, wmMouseHWhl:
-				d := int16(m.MouseData >> 16)
-				u := uint64(abs(int(d)) / 120)
-				id := ""
-				switch {
-				case wParam == wmMouseWheel && d > 0:
-					id = "up"
-				case wParam == wmMouseWheel && d < 0:
-					id = "down"
-				case d > 0:
-					id = "right"
-				case d < 0:
-					id = "left"
-				}
-				if id != "" {
-					queueEvent("scroll", id, u)
-				}
-			}
-		}
-	}
-	r, _, _ := pCallNextHookEx.Call(0, uintptr(nCode), wParam, lParam)
-	return r
-}
-
-// recorder drains the hook queue and records each event.
+// recorder drains the input queue and records each event.
 func recorder() {
 	for ev := range hookEvents {
 		if isPaused() {
@@ -372,50 +338,160 @@ func recorder() {
 	}
 }
 
-var (
-	keyboardCallback uintptr
-	mouseCallback    uintptr
-)
+// repeatGapNS: a key that is still held sends auto-repeat key-downs well inside this
+// gap. A key-down after a longer pause is a new press, even if its release was missed.
+const repeatGapNS = int64(1500 * time.Millisecond)
 
-// installHooks (re)installs both low-level hooks. Callers hold hookMu.
-func installHooks() {
-	if keyboardCallback == 0 {
-		keyboardCallback = syscall.NewCallback(func(n, w, l uintptr) uintptr { return keyboardProc(int(n), w, l) })
-		mouseCallback = syscall.NewCallback(func(n, w, l uintptr) uintptr { return mouseProc(int(n), w, l) })
+// handleKey counts a key-down as a new press unless it is auto-repeat of a key still held.
+// Runs on the input thread only (pressedAt is not locked).
+func handleKey(vk, scan uint32, down bool) {
+	if !down {
+		delete(pressedAt, vk)
+		return
 	}
-	removeHooksLocked()
-	hookKeyboard, _, _ = pSetWindowsHookExW.Call(whKeyboardLL, keyboardCallback, appInstance, 0)
-	hookMouse, _, _ = pSetWindowsHookExW.Call(whMouseLL, mouseCallback, appInstance, 0)
+	now := time.Now().UnixNano()
+	last, held := pressedAt[vk]
+	if !held || now-last > repeatGapNS {
+		queueEvent("key", keyName(vk, scan, 0), 0)
+	}
+	pressedAt[vk] = now
 }
 
-func removeHooksLocked() {
-	if hookKeyboard != 0 {
-		pUnhookWindowsHookEx.Call(hookKeyboard)
-		hookKeyboard = 0
+// handleMouse queues one event per button press and one per wheel step group.
+func handleMouse(m *rawMouse) {
+	f := m.ButtonFlags
+	if f&rmbLeftDown != 0 {
+		queueEvent("mouse", "left", 0)
 	}
-	if hookMouse != 0 {
-		pUnhookWindowsHookEx.Call(hookMouse)
-		hookMouse = 0
+	if f&rmbRightDown != 0 {
+		queueEvent("mouse", "right", 0)
+	}
+	if f&rmbMiddleDown != 0 {
+		queueEvent("mouse", "middle", 0)
+	}
+	if f&rmbX1Down != 0 {
+		queueEvent("mouse", "x1", 0)
+	}
+	if f&rmbX2Down != 0 {
+		queueEvent("mouse", "x2", 0)
+	}
+	if f&rmbWheel != 0 {
+		d := int16(m.ButtonData)
+		id := ""
+		switch {
+		case d > 0:
+			id = "up"
+		case d < 0:
+			id = "down"
+		}
+		if id != "" {
+			queueEvent("scroll", id, uint64(abs(int(d))/120))
+		}
+	}
+	if f&rmbHWheel != 0 {
+		d := int16(m.ButtonData)
+		id := ""
+		switch {
+		case d > 0:
+			id = "right"
+		case d < 0:
+			id = "left"
+		}
+		if id != "" {
+			queueEvent("scroll", id, uint64(abs(int(d))/120))
+		}
 	}
 }
 
+// rawBuf is reused for every WM_INPUT. Only the input thread touches it.
+var rawBuf [256]byte
+
+// handleRawInput decodes one WM_INPUT message (lParam is the HRAWINPUT handle).
+func handleRawInput(lp uintptr) {
+	size := uint32(len(rawBuf))
+	n, _, _ := pGetRawInputData.Call(lp, ridInput, uintptr(unsafe.Pointer(&rawBuf[0])), uintptr(unsafe.Pointer(&size)), unsafe.Sizeof(rawHeader{}))
+	if int32(n) <= 0 {
+		return
+	}
+	p := unsafe.Pointer(&rawBuf[0])
+	hdr := (*rawHeader)(p)
+	data := unsafe.Add(p, unsafe.Sizeof(rawHeader{}))
+	if isPaused() {
+		return
+	}
+	switch hdr.Type {
+	case rimTypeKeyboard:
+		k := (*rawKeyboard)(data)
+		if k.VKey == 0 || k.VKey == 0xFF {
+			return
+		}
+		handleKey(uint32(k.VKey), uint32(k.MakeCode), k.Flags&riKeyBreak == 0)
+	case rimTypeMouse:
+		handleMouse((*rawMouse)(data))
+	}
+}
+
+// rawProc is the window procedure of the hidden input window.
+func rawProc(h, msg, wp, lp uintptr) uintptr {
+	if msg == wmInput {
+		handleRawInput(lp)
+	}
+	r, _, _ := pDefWindowProcW.Call(h, msg, wp, lp)
+	return r
+}
+
+// registerRawInput asks Windows for keyboard and mouse input sent to target.
+// RIDEV_INPUTSINK keeps delivering input while the window is in the background or the tray.
+func registerRawInput(target uintptr) (bool, error) {
+	devs := [2]rawDevice{
+		{UsagePage: 1, Usage: usageKeyboard, Flags: ridevInputSink, Target: target},
+		{UsagePage: 1, Usage: usageMouse, Flags: ridevInputSink, Target: target},
+	}
+	r, _, err := pRegisterRawInputDevices.Call(uintptr(unsafe.Pointer(&devs[0])), 2, unsafe.Sizeof(devs[0]))
+	if r == 0 {
+		return false, err
+	}
+	return true, nil
+}
+
+// unregisterRawInput stops keyboard and mouse delivery (RIDEV_REMOVE needs no window).
+func unregisterRawInput() {
+	devs := [2]rawDevice{
+		{UsagePage: 1, Usage: usageKeyboard, Flags: ridevRemove},
+		{UsagePage: 1, Usage: usageMouse, Flags: ridevRemove},
+	}
+	pRegisterRawInputDevices.Call(uintptr(unsafe.Pointer(&devs[0])), 2, unsafe.Sizeof(devs[0]))
+}
+
+// removeHooks stops input capture. Name kept from the hook version; it is called at shutdown.
 func removeHooks() {
-	hookMu.Lock()
-	defer hookMu.Unlock()
-	removeHooksLocked()
+	unregisterRawInput()
+	rawOK.Store(false)
 }
 
-// hookThread owns the hooks: it installs them, pumps its own message loop (so the
-// UI thread cannot delay them) and reinstalls them every few seconds as a safety net.
-func hookThread() {
+// inputThread owns the input window: it creates it, registers for Raw Input, pumps its own
+// message loop (so the UI thread cannot delay input) and re-registers every few seconds
+// as a safety net. Its status is reported as "recording" by /api/status.
+func inputThread() {
 	runtime.LockOSThread()
-	hookMu.Lock()
-	installHooks()
-	ok := hookKeyboard != 0 && hookMouse != 0
-	hookMu.Unlock()
+	instance := appInstance
+	className := utf16p("KeyClickRawInput")
+	rawCallback = syscall.NewCallback(rawProc)
+	wc := wndClassEx{Size: uint32(unsafe.Sizeof(wndClassEx{})), WndProc: rawCallback, Instance: instance, ClassName: className}
+	if r, _, _ := pRegisterClassExW.Call(uintptr(unsafe.Pointer(&wc))); r == 0 {
+		logLine("Input setup warning: RegisterClassExW failed")
+		return
+	}
+	hwndMessage := ^uintptr(2) // HWND_MESSAGE (-3): a message-only window, never visible
+	inputWnd, _, _ = pCreateWindowExW.Call(0, uintptr(unsafe.Pointer(className)), 0, 0, 0, 0, 0, 0, hwndMessage, 0, instance, 0)
+	if inputWnd == 0 {
+		logLine("Input setup warning: CreateWindowExW failed")
+		return
+	}
+	ok, regErr := registerRawInput(inputWnd)
+	rawOK.Store(ok)
 	if !ok {
-		e, _, _ := pGetLastError.Call()
-		logLine(fmt.Sprintf("Input hook setup warning: error=%d", e))
+		logLine(fmt.Sprintf("Input setup warning: RegisterRawInputDevices failed: %v", regErr))
 	}
 	pSetTimer.Call(0, 1, 3000, 0)
 	var m winMsg
@@ -425,9 +501,8 @@ func hookThread() {
 			return
 		}
 		if m.Message == wmTimer {
-			hookMu.Lock()
-			installHooks()
-			hookMu.Unlock()
+			ok, _ := registerRawInput(inputWnd)
+			rawOK.Store(ok)
 			continue
 		}
 		pTranslateMessage.Call(uintptr(unsafe.Pointer(&m)))
@@ -743,14 +818,22 @@ func breakWatcher() {
 func main() {
 	runtime.LockOSThread()
 	for _, a := range os.Args[1:] {
-		if a == "--background" {
+		switch a {
+		case "--background":
 			startHidden = true
+		case "--register-startup", "--unregister-startup": // used by the installer and uninstaller
+			if err := setStartup(a == "--register-startup"); err != nil {
+				os.Exit(1)
+			}
+			os.Exit(0)
 		}
 	}
 	// Only one instance may count input, otherwise every key would be counted twice.
 	name := utf16p(`Local\KeyClickTrackerSingleton`)
-	pCreateMutexW.Call(0, 0, uintptr(unsafe.Pointer(name)))
-	if e, _, _ := pGetLastError.Call(); e == 183 { // ERROR_ALREADY_EXISTS
+	// The error comes from this same call. A separate GetLastError call can read a value
+	// that Go's runtime has already changed, which let a second copy run and double-count.
+	_, _, mErr := pCreateMutexW.Call(0, 0, uintptr(unsafe.Pointer(name)))
+	if errno, _ := mErr.(syscall.Errno); errno == 183 { // ERROR_ALREADY_EXISTS
 		if h, _, _ := pFindWindowW.Call(uintptr(unsafe.Pointer(utf16p("KeyClickTrackerHost"))), 0); h != 0 {
 			pPostMessageW.Call(h, wmOpen, 0, 0)
 		}
@@ -759,6 +842,7 @@ func main() {
 
 	loadStore()
 	logLine(appName + " " + appVersion + " starting")
+	go ensureStartup() // keeps start-with-Windows pointing at this program
 	storeMu.RLock()
 	hide := startHidden
 	storeMu.RUnlock()
@@ -773,7 +857,7 @@ func main() {
 	onExitRequest = func() { pPostMessageW.Call(hostHWND, wmExit, 0, 0) }
 	addTrayIcon()
 	go recorder()
-	go hookThread() // hooks live on their own thread, independent of the UI
+	go inputThread() // Raw Input lives on its own thread, independent of the UI
 	ln, err := startServer()
 	if err != nil {
 		logLine("HTTP server failed: " + err.Error())
