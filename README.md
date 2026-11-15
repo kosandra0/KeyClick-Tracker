@@ -2,7 +2,7 @@
 
 A quiet, private Windows app that counts your key presses, mouse clicks and scrolls, so you can see the shape of your day.
 
-**It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope`, and nothing is sent anywhere.
+**It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyClick`, and nothing is sent anywhere.
 
 ## What it does
 
