@@ -1,6 +1,14 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '1.2.3', date: '2026-11-15', title: 'The live box stays on top and stays on screen',
+    intro: 'Closing the window to the system tray no longer makes the floating live box disappear. The live box now stays on top of other windows until you turn it off in Settings or quit the app from the tray.',
+    items: [
+      ['fixed', 'The floating live box vanished after the main window was closed to the system tray, or after another window was used. Its position was never re-checked, because the check was queued on the wrong WebView2 view, so the box could slip behind other windows. The check now runs, and the box is raised back to the top every 1.5 seconds.'],
+      ['changed', 'The live box stays on screen until you turn it off in Settings or quit KeyClick Tracker from the tray menu.'],
+    ],
+  },
+  {
     version: '1.2.2', date: '2026-11-15', title: 'Counts administrator windows, starts at sign-in, now with a setup program',
     intro: 'The real reason keys and clicks were missed in PowerShell and Notepad was found: those windows were running as administrator, and Windows hides administrator windows from normal programs. KeyClick Tracker now runs as administrator too. Your data is backed up before this update runs and is kept.',
     items: [

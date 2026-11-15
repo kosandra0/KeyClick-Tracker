@@ -250,7 +250,10 @@ func watchOverlayRect() {
 		if ovHWND == 0 || ovView == nil {
 			continue
 		}
-		ovView.Dispatch(ensureOverlayVisible) // repair on the UI thread
+		// Dispatch on the MAIN view: go-webview2 runs only the dispatch queue of the
+		// view whose Run loop is active, so ovView.Dispatch never ran and the
+		// overlay was never re-raised to the top after other windows took focus.
+		view.Dispatch(ensureOverlayVisible) // repair on the UI thread
 		if vis, _, _ := pIsWindowVisible.Call(ovHWND); vis == 0 {
 			continue
 		}

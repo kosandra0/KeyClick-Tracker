@@ -28,7 +28,7 @@ import (
 //go:embed payload/KeyClick-Tracker.exe
 var appExe []byte
 
-// version is set by the build script: -ldflags "-X main.version=1.2.2".
+// version is set by the build script: -ldflags "-X main.version=1.2.3".
 var version = "dev"
 
 const (

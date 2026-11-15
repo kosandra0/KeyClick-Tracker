@@ -1,6 +1,6 @@
 # Builds "KeyClick Tracker.exe" into the parent folder.
 # Uses the portable Go in ..\_tools\go when present, otherwise the Go on PATH.
-param([string]$Out = '')   # default: ..\KeyClick-Tracker-Setup-v<version>.exe
+param([string]$Out = '', [switch]$Install)   # -Install: also silently update the installed copy (the one pinned at sign-in)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 $tools = Join-Path (Split-Path $PSScriptRoot -Parent) '_tools'
@@ -60,3 +60,8 @@ $f = Get-Item $Out
 Write-Host ("Setup {0} ({1:N0} bytes) SHA-256 {2}" -f $f.FullName, $f.Length, (Get-FileHash $f.FullName -Algorithm SHA256).Hash)
 $s = Get-Item $standOut
 Write-Host ("Standalone {0} ({1:N0} bytes) SHA-256 {2}" -f $s.FullName, $s.Length, (Get-FileHash $s.FullName -Algorithm SHA256).Hash)
+if ($Install) {
+  # Silent update of the installed copy. The setup closes the running copy first (its counts are saved).
+  $p2 = Start-Process -FilePath $f.FullName -ArgumentList '/S' -PassThru
+  Write-Host "Installing silently (setup pid $($p2.Id)). Check %TEMP%\KeyClickTracker-Setup.log."
+}
