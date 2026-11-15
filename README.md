@@ -1,8 +1,11 @@
-﻿# KeyClick Tracker
+﻿ # KeyClick Tracker
 
-A quiet, private Windows app that counts your key presses, mouse clicks and scrolls, so you can see the shape of your day.
+<p align=center><img width="512" height="512" alt="02-KC-Glass-Wordmark" src="https://github.com/user-attachments/assets/f3dfa636-e4f1-45b0-bf8e-debba334760d" /><p/>
 
-**It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyClick`, and nothing is sent anywhere.
+
+_A quiet, private Windows app that counts your key presses, mouse clicks and scrolls, so you can see the shape of your day._
+
+_**It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyClick`, and nothing is sent anywhere._
 
 ## What it does
 
