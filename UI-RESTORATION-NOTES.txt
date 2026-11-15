@@ -1,0 +1,35 @@
+UI RESTORATION NOTES
+====================
+
+Why the previous executable looked wrong:
+The previous KeyScope.exe was a separate native Win32 proof-of-concept with
+basic system controls. It did not render the Arena dashboard source. That was
+an incorrect implementation choice and did not match the design brief.
+
+What this package changes:
+- Replaces the plain-grey native form with a desktop analytics dashboard.
+- Restores the dark, calm visual direction shown in the Arena screenshot.
+- Includes Overview, Keyboard Analytics, Mouse Analytics, Activity History,
+  Reports, Settings and About pages.
+- Adds rounded cards, refined typography, charts, keyboard heatmap, mouse
+  breakdown visualization, date-range/aggregation selectors and subtle motion.
+- Embeds the dashboard assets in KeyScope.exe so users do not need Node or a
+  separately running Next.js development server.
+- Keeps native keyboard/mouse hooks, hourly aggregation, local persistence,
+  pause/resume and system-tray actions in the Windows host.
+
+Original files preserved:
+The original React/Next.js implementation is included in
+Original-Dashboard-Source. Its files are copied from the source package and
+are not overwritten by this restoration.
+
+Honest implementation note:
+The exe uses a self-contained HTML/CSS/JavaScript implementation of the
+original dashboard's visual direction. It does not compile the original
+React/Next.js project into the executable. The original source remains present
+for a future Tauri 2 migration if you choose to do that later.
+
+Window rendering:
+The native Go host launches Microsoft Edge with --app mode. The dashboard
+appears in an application-style Edge window without tabs/address bar. The
+monitoring host and system tray run as the native KeyScope process.

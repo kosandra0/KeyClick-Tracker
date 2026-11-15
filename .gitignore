@@ -1,0 +1,12 @@
+﻿# Built binaries and build leftovers
+*.exe
+*.exe~
+*.log
+*.tmp
+.playwright-mcp/
+# Local Go toolchain (not part of the source)
+_tools/
+# Personal data is never stored in the repository
+activity.json
+activity.json.tmp
+Backups/
