@@ -14,6 +14,8 @@ type Totals struct {
 	ScrollDistance uint64 `json:"scrollDistance"`
 	Chars          uint64 `json:"chars"`
 	Words          uint64 `json:"words"`
+	Shortcuts      uint64 `json:"shortcuts"` // v2.0.0 (F4): Ctrl/Alt/Win combinations
+	ModKeys        uint64 `json:"modKeys"`   // v2.0.0 (F4): Ctrl/Alt/Win presses
 }
 type SeriesPoint struct {
 	Label   string `json:"label"`
@@ -301,10 +303,12 @@ func buildStats(q map[string][]string) StatsResponse {
 
 	// Speed figures come from the per-day minute summaries (+ the running minute).
 	var r Rates
-	var chars, clicks, keys, words uint64
+	var chars, clicks, keys, words, shortcuts, modKeys uint64
 	var wpmSum, cpmSum float64
 	startDay := midnight(start)
 	addDay := func(d *DayRoll) {
+		shortcuts += d.Shortcuts
+		modKeys += d.ModKeys
 		chars += d.Chars
 		words += d.Words
 		clicks += d.Clicks
@@ -355,6 +359,8 @@ func buildStats(q map[string][]string) StatsResponse {
 	}
 	out.Totals.Chars = chars
 	out.Totals.Words = words
+	out.Totals.Shortcuts = shortcuts
+	out.Totals.ModKeys = modKeys
 	if r.ActiveMinutes > 0 {
 		r.OverallWPM = float64(chars) / 5 / float64(r.ActiveMinutes)
 		r.OverallCPM = float64(clicks) / float64(r.ActiveMinutes)

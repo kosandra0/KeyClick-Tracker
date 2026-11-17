@@ -15,11 +15,13 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "1.2.3"
+	appVersion = "2.0.0"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"
-	storeVersion   = 3
+	// storeVersion 4 (v2.0.0) only adds optional fields (idle_sec, idle_minutes,
+	// hotkey_off). Version 3 files load unchanged; see V2.0.0-PLAN.md section 5.
+	storeVersion = 4
 )
 
 // ---------------------------------------------------------------- data model
@@ -46,6 +48,35 @@ type DayRoll struct {
 	CPMSum    float64 `json:"cpm_sum"`
 	PeakWPM   float64 `json:"peak_wpm"`
 	PeakCPM   float64 `json:"peak_cpm"`
+	IdleSec   uint64  `json:"idle_sec,omitempty"` // v2.0.0: idle seconds (pauses longer than the idle threshold)
+	// v2.0.0 (F1): counts per program file name. Names only, never titles or paths.
+	Apps map[string]*AppCount `json:"apps,omitempty"`
+	// v2.0.0 (F4): Ctrl/Alt/Win combinations and the Ctrl/Alt/Win presses themselves.
+	Shortcuts uint64 `json:"shortcuts,omitempty"`
+	ModKeys   uint64 `json:"mod_keys,omitempty"`
+	// v2.0.0 (F6): the busiest 10 minutes of the day (keys + clicks + scrolls).
+	Peak10 uint64 `json:"peak10,omitempty"`
+	// v2.0.0 (F14): key presses per keyboard layout name.
+	Layouts map[string]uint64 `json:"layouts,omitempty"`
+}
+
+// PracticeScore is the result of one typing practice lesson (F8). Scores only: the typed text
+// is never stored.
+type PracticeScore struct {
+	At     string  `json:"at"` // RFC 3339
+	Lesson string  `json:"lesson"`
+	WPM    float64 `json:"wpm"`
+	Acc    float64 `json:"acc"` // percent 0..100
+	Errors int     `json:"errors"`
+	Secs   int     `json:"secs"`
+}
+
+// AppCount is what one program received on one day.
+type AppCount struct {
+	Keys   uint64 `json:"k,omitempty"`
+	Clicks uint64 `json:"c,omitempty"`
+	Scroll uint64 `json:"s,omitempty"`
+	Secs   uint64 `json:"t,omitempty"` // seconds in the foreground while input was recent
 }
 
 type Settings struct {
@@ -69,11 +100,42 @@ type Settings struct {
 	OverlayW     int    `json:"overlay_w"`
 	OverlayH     int    `json:"overlay_h"`
 	OverlayTheme string `json:"overlay_theme"` // colour theme of the floating live box, see ui/themes.js KC_OV_THEMES
+	// v2.0.0 additions. Optional: an old file simply reads zero values.
+	IdleMinutes int  `json:"idle_minutes,omitempty"` // pause length that counts as idle; 0 = default 5 (range 1..60)
+	HotkeyOff   bool `json:"hotkey_off,omitempty"`   // global hotkeys are on unless this is true (default on)
+	// AppTrackingOff: per-program counting is on unless this is true (default on, F1).
+	AppTrackingOff bool `json:"app_tracking_off,omitempty"`
+	// F9 scheduled backups: how many daily copies to keep (7..90, default 14).
+	BackupDays int `json:"backup_days,omitempty"`
+	// F5 break reminders: "" or "simple" (BreakMinutes) or "cycle" (WorkMinutes then RestMinutes).
+	ReminderMode string `json:"reminder_mode,omitempty"`
+	WorkMinutes  int    `json:"work_minutes,omitempty"`
+	RestMinutes  int    `json:"rest_minutes,omitempty"`
+	// F7 typing-speed goal (words per minute, 0 = off).
+	GoalWPM int `json:"goal_wpm,omitempty"`
+	// F3 reports: "" (off), "daily" (18:00, today so far) or "weekly" (Monday 09:00, last week).
+	ReportMode string `json:"report_mode,omitempty"`
+	ReportFile bool   `json:"report_file,omitempty"` // also save the report as a .md file
+	LastReport string `json:"last_report,omitempty"` // period key of the last report made
+	// F13 live box presets: compact, detailed (default) or sparkline, with a size per preset.
+	OverlayPreset string            `json:"overlay_preset,omitempty"`
+	OverlaySizes  map[string][2]int `json:"overlay_sizes,omitempty"`
+	// F6 strain signals (off by default) and their optional once-a-day tray note.
+	StrainOn     bool `json:"strain_on,omitempty"`
+	StrainNotify bool `json:"strain_notify,omitempty"`
+	// A2 quiet hours: counting is paused between QuietFrom and QuietTo (not deleted).
+	QuietOn   bool   `json:"quiet_on,omitempty"`
+	QuietFrom string `json:"quiet_from,omitempty"`
+	QuietTo   string `json:"quiet_to,omitempty"`
+	// F14: counting by keyboard layout is on unless this is true.
+	LayoutOff bool `json:"layout_off,omitempty"`
+	// F6: the day the last strain note was shown (one tray note per day).
+	LastStrainNote string `json:"last_strain_note,omitempty"`
 }
 
 func defaultSettings() *Settings {
 	return &Settings{Theme: "classic", Font: "segoe", FontScale: 100, Animations: true, LiveNumbers: true, GoalKeys: 8000, GoalClicks: 1500,
-		Clock24: false, TypingUnit: "wpm", ClickUnit: "cpm", OverlayW: 250, OverlayH: 92, OverlayTheme: "ink"}
+		Clock24: false, TypingUnit: "wpm", ClickUnit: "cpm", OverlayW: 250, OverlayH: 92, OverlayTheme: "ink", IdleMinutes: 5}
 }
 
 type Store struct {
@@ -83,6 +145,9 @@ type Store struct {
 	Buckets     map[string]*HourBucket `json:"buckets"`
 	Days        map[string]*DayRoll    `json:"days,omitempty"`
 	Settings    *Settings              `json:"settings,omitempty"`
+	// v2.0.0: goals in force per day with the met flags (F7), and practice scores (F8).
+	GoalLog  map[string]*GoalDay `json:"goal_log,omitempty"`
+	Practice []PracticeScore     `json:"practice,omitempty"`
 }
 
 type minuteAcc struct {
@@ -129,8 +194,21 @@ var (
 	sessScroll uint64
 	sessActive uint32
 	wordInside bool // word counter state: true while inside a word (no text is kept)
-	signalLive = make(chan struct{}, 1)
+	// lastRecorded is the time of the previous counted event (guarded by storeMu).
+	// Zero means "no anchor": the first event after start, pause or resume adds no idle time.
+	lastRecorded time.Time
+	// lastSaveUnix is the Unix time of the last successful save (atomic; read by /api/health).
+	lastSaveUnix atomic.Int64
+	signalLive   = make(chan struct{}, 1)
 )
+
+// resetIdleAnchor forgets the previous event time. It is called on resume from sleep and
+// when counting restarts after a pause, so time away from the PC is not recorded as idle.
+func resetIdleAnchor() {
+	storeMu.Lock()
+	lastRecorded = time.Time{}
+	storeMu.Unlock()
+}
 
 func logLine(s string) {
 	if logger != nil {
@@ -227,9 +305,70 @@ func (s *Store) normalize() {
 	if st.OverlayH < 56 || st.OverlayH > 500 {
 		st.OverlayH = 92
 	}
+	// v2.0.0 (B14): goals were not range-checked before. Keep them at sane values.
+	st.GoalKeys = min(st.GoalKeys, 10_000_000)
+	st.GoalClicks = min(st.GoalClicks, 10_000_000)
+	st.IdleMinutes = idleMinutesOrDefault(st.IdleMinutes)
+	// v2.0.0 additions: every value is kept in range.
+	st.BackupDays = clampInt(orDefault(st.BackupDays, 14), 7, 90)
+	switch st.ReminderMode {
+	case "", "simple", "cycle":
+	default:
+		st.ReminderMode = ""
+	}
+	st.WorkMinutes = clampInt(orDefault(st.WorkMinutes, 50), 10, 180)
+	st.RestMinutes = clampInt(orDefault(st.RestMinutes, 10), 1, 60)
+	st.GoalWPM = clampInt(st.GoalWPM, 0, 300)
+	switch st.ReportMode {
+	case "", "daily", "weekly":
+	default:
+		st.ReportMode = ""
+	}
+	if len(st.LastReport) > 40 {
+		st.LastReport = ""
+	}
+	switch st.OverlayPreset {
+	case "compact", "detailed", "sparkline":
+	default:
+		st.OverlayPreset = "detailed"
+	}
+	for k, sz := range st.OverlaySizes {
+		if (k != "compact" && k != "detailed" && k != "sparkline") || sz[0] < 150 || sz[0] > 900 || sz[1] < 56 || sz[1] > 500 {
+			delete(st.OverlaySizes, k)
+		}
+	}
+	if _, ok := parseHM(st.QuietFrom); !ok {
+		st.QuietFrom = "23:00"
+	}
+	if _, ok := parseHM(st.QuietTo); !ok {
+		st.QuietTo = "07:00"
+	}
+	if s.GoalLog == nil {
+		s.GoalLog = map[string]*GoalDay{}
+	}
+	if len(s.Practice) > 500 { // keep the latest 500 lesson scores
+		s.Practice = s.Practice[len(s.Practice)-500:]
+	}
+}
+
+// orDefault returns def when v is zero (an old file has no value for a new setting).
+func orDefault(v, def int) int {
+	if v == 0 {
+		return def
+	}
+	return v
 }
 
 func dayKey(t time.Time) string { return t.In(time.Local).Format("2006-01-02") }
+
+// localHourStart is the start of the local clock hour. time.Truncate(time.Hour) rounds to UTC
+// hours, so in a time zone with a half-hour offset (India, UTC+5:30) it gave buckets that start
+// at :30, and the hour-of-day charts were shifted by half an hour. Fixed in v2.0.0 (B17); older
+// buckets are kept as they are, new activity uses the corrected key.
+func localHourStart(t time.Time) time.Time {
+	t = t.In(time.Local)
+	return time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.Local)
+}
 
 // ------------------------------------------------------------ recording path
 
@@ -240,12 +379,25 @@ func record(kind, id string, units uint64) {
 	}
 	now := time.Now()
 	storeMu.Lock()
-	b := store.Buckets[now.Truncate(time.Hour).Format(time.RFC3339)]
+	hourKey := localHourStart(now).Format(time.RFC3339)
+	b := store.Buckets[hourKey]
 	if b == nil {
 		b = newBucket()
-		store.Buckets[now.Truncate(time.Hour).Format(time.RFC3339)] = b
+		store.Buckets[hourKey] = b
 	}
 	rollMinuteLocked(now, false)
+	// v2.0.0 idle tracking: the pause since the previous event, beyond the threshold, is idle.
+	if !lastRecorded.IsZero() {
+		threshold := time.Duration(idleMinutesOrDefault(store.Settings.IdleMinutes)) * time.Minute
+		for key, d := range idleSplit(lastRecorded, now, threshold) {
+			if dr := store.Days[key]; dr != nil {
+				dr.IdleSec += uint64(d / time.Second)
+			} else {
+				store.Days[key] = &DayRoll{IdleSec: uint64(d / time.Second)}
+			}
+		}
+	}
+	lastRecorded = now
 	var chars, keys, clicks, scrolls uint64
 	switch kind {
 	case "key":
@@ -281,6 +433,8 @@ func record(kind, id string, units uint64) {
 		}
 		pend.ScIDs[id]++
 	}
+	addAppInputLocked(now, kind)    // v2.0.0 (F1): credit the focused program (no-op when tracking is off)
+	addLayoutInputLocked(now, kind) // v2.0.0 (F14): credit the keyboard layout in use
 	if cur.keys+cur.clicks+cur.scroll == 0 {
 		sessActive++
 	}
@@ -350,7 +504,9 @@ func rollMinuteLocked(now time.Time, force bool) {
 		return
 	}
 	if cur.keys+cur.clicks+cur.scroll > 0 && !cur.start.IsZero() {
-		foldMinute(dayFor(cur.start), cur)
+		d := dayFor(cur.start)
+		foldMinute(d, cur)
+		trackBurst(d, cur) // F6: the day's busiest 10 minutes
 	}
 	cur = minuteAcc{start: ms}
 }
@@ -539,10 +695,14 @@ func dailyBackup() {
 			daily = append(daily, e.Name())
 		}
 	}
-	sort.Strings(daily)
-	for len(daily) > 14 { // keep two weeks of daily snapshots; other backups are never pruned
-		_ = os.Remove(filepath.Join(backupDir(), daily[0]))
-		daily = daily[1:]
+	// v2.0.0 (F9): the number of daily snapshots kept is a setting (7 to 90, default 14).
+	// Only activity-daily-* files are ever pruned; every other backup is kept.
+	keep := 14
+	if store.Settings != nil {
+		keep = clampInt(orDefault(store.Settings.BackupDays, 14), 7, 90)
+	}
+	for _, n := range namesToPrune(daily, keep) {
+		_ = os.Remove(filepath.Join(backupDir(), n))
 	}
 }
 
@@ -565,6 +725,7 @@ func saveStore() error {
 		_ = os.Remove(tmp)
 		return fmt.Errorf("replace statistics file: %v", err)
 	}
+	lastSaveUnix.Store(time.Now().Unix())
 	return nil
 }
 
@@ -572,5 +733,7 @@ func flushForExit() {
 	storeMu.Lock()
 	rollMinuteLocked(time.Now(), true)
 	storeMu.Unlock()
-	_ = saveStore()
+	if err := saveStore(); err != nil { // B2: the exit save used to fail silently
+		logLine("save at exit failed: " + err.Error())
+	}
 }

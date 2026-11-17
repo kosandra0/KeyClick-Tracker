@@ -34,6 +34,11 @@ const (
 	taskName       = "KeyClick Tracker"
 )
 
+// testCopy reports whether this process is a test copy (KEYCLICK_DEV=1). A test copy uses its
+// own data folder and must not change anything outside it: not the sign-in task, not the registry.
+// Added in v2.0.0 after a test copy repointed the real startup task at a temporary file.
+func testCopy() bool { return os.Getenv("KEYCLICK_DEV") == "1" }
+
 // startupOn caches whether start-with-Windows is on, so /api/status never has to run schtasks.
 var startupOn atomic.Bool
 
@@ -144,6 +149,9 @@ func taskXML(exe string) string {
 // setStartup turns start-with-Windows on or off. Turning it on needs administrator rights,
 // which the app always has (it is started with them).
 func setStartup(on bool) error {
+	if testCopy() {
+		return fmt.Errorf("start with Windows is disabled in test copies")
+	}
 	if !on {
 		if _, exists := taskCommand(); exists {
 			if out, err := hiddenCmd(schtasksPath(), "/Delete", "/TN", taskName, "/F").CombinedOutput(); err != nil {
@@ -186,6 +194,9 @@ func setStartup(on bool) error {
 // is on but points at a program that is no longer this one (for example after the app was
 // moved or reinstalled) or still uses the old registry entry, it repairs it.
 func ensureStartup() {
+	if testCopy() {
+		return // a test copy must never repoint the real sign-in task at itself
+	}
 	exe, _ := os.Executable()
 	cmd, haveTask := taskCommand()
 	legacy := legacyStartupEntry()

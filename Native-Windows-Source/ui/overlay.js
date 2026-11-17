@@ -6,7 +6,8 @@
   const $ = s => document.querySelector(s);
   const H = { 'X-KeyScope-Token': token };
   const odoW = new KCOdo($('#n-w')), odoC = new KCOdo($('#n-c'));
-  let units = { w: 'wpm', c: 'cpm' }, live = { wpm: 0, cpm: 0 };
+  let units = { w: 'wpm', c: 'cpm' }, live = { wpm: 0, cpm: 0 }, preset = 'detailed';
+  const hist = [];   // the last 60 seconds of typing speed, for the sparkline style
   const call = (fn, ...a) => { if (typeof window[fn] === 'function') window[fn](...a); };
 
   function paint() {
@@ -19,6 +20,8 @@
     try {
       const r = await (await fetch('/api/settings', { headers: H, cache: 'no-store' })).json();
       units = { w: r.settings.typing_unit || 'wpm', c: r.settings.click_unit || 'cpm' };
+      preset = ['compact', 'detailed', 'sparkline'].includes(r.settings.overlay_preset) ? r.settings.overlay_preset : 'detailed';
+      $('#ov').dataset.preset = preset;
       applyLook(r.settings);
       paint();
     } catch (e) {}
@@ -41,9 +44,12 @@
   window.kcOvReload = loadSettings; // called by the window host after a settings change
   function connect() {
     const es = new EventSource('/api/live?token=' + encodeURIComponent(token));
-    es.onmessage = e => { try { const f = JSON.parse(e.data); live = { wpm: f.wpm || 0, cpm: f.cpm || 0 }; paint(); } catch (err) {} };
+    es.onmessage = e => { try { const f = JSON.parse(e.data); lastFrameAt = Date.now(); live = { wpm: f.wpm || 0, cpm: f.cpm || 0 }; paint(); } catch (err) {} };
     es.onopen = loadSettings;
   }
+  /* The server sends a frame at least every 2 s. With none for 5 s the old speed is wrong: show 0. */
+  let lastFrameAt = Date.now();
+  setInterval(() => { if (Date.now() - lastFrameAt > 5000 && (live.wpm || live.cpm)) { live = { wpm: 0, cpm: 0 }; paint(); } }, 1000);
   const ov = $('#ov');
   ov.addEventListener('mouseenter', () => call('kcOvHover', true));
   ov.addEventListener('mouseleave', () => call('kcOvHover', false));
@@ -53,7 +59,18 @@
   });
   $('#grip').addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); call('kcOvResize'); });
   $('#x').addEventListener('click', e => { e.stopPropagation(); call('kcOvClose'); });
-  window.addEventListener('contextmenu', e => e.preventDefault());
+  /* Right-click switches to the next style (compact, detailed, sparkline). */
+  window.addEventListener('contextmenu', async e => {
+    e.preventDefault();
+    const order = ['compact', 'detailed', 'sparkline'], next = order[(order.indexOf(preset) + 1) % order.length];
+    try { await fetch('/api/settings', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify({ overlay_preset: next }) }); loadSettings(); } catch (err) {}
+  });
+  setInterval(() => {   // one sample a second; the line is drawn only in the sparkline style
+    hist.push(live.wpm); if (hist.length > 60) hist.shift();
+    if (preset !== 'sparkline') return;
+    const max = Math.max(10, ...hist), n = hist.length;
+    $('#spark-l').setAttribute('points', hist.map((v, i) => ((120 * i / Math.max(1, 59)).toFixed(1) + ',' + (28 - 26 * v / max).toFixed(1))).join(' '));
+  }, 1000);
   setInterval(loadSettings, 5000);   // picks up unit changes made in the main window
   paint(); loadSettings(); connect();
 })();

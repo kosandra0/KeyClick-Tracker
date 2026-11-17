@@ -213,9 +213,14 @@ func fixed(dst []uint16, s string) {
 	copy(dst, v)
 	dst[len(dst)-1] = 0
 }
-func isPaused() bool   { return pausedFlag.Load() }
-func setPaused(v bool) { pausedFlag.Store(v) }
-func hooksOK() bool    { return rawOK.Load() }
+func isPaused() bool { return pausedFlag.Load() }
+func setPaused(v bool) {
+	pausedFlag.Store(v)
+	if !v {
+		resetIdleAnchor() // v2.0.0: time spent paused is not idle time
+	}
+}
+func hooksOK() bool { return rawOK.Load() }
 func abs(v int) int {
 	if v < 0 {
 		return -v
@@ -330,7 +335,11 @@ func queueEvent(kind, id string, units uint64) {
 // recorder drains the input queue and records each event.
 func recorder() {
 	for ev := range hookEvents {
-		if isPaused() {
+		if isPaused() || quietNow() {
+			continue
+		}
+		if ev.kind == "shortcut" || ev.kind == "modkey" { // F4: counted on the day, not as extra keys
+			recordCombo(ev.kind)
 			continue
 		}
 		record(ev.kind, ev.id, ev.units)
@@ -344,15 +353,33 @@ const repeatGapNS = int64(1500 * time.Millisecond)
 
 // handleKey counts a key-down as a new press unless it is auto-repeat of a key still held.
 // Runs on the input thread only (pressedAt is not locked).
-func handleKey(vk, scan uint32, down bool) {
+// mods is the held-modifier state for shortcut counting (F4). Input thread only.
+var mods modState
+
+func handleKey(vk, scan uint32, down bool, ext bool) {
+	t := time.Now()
+	isMod := mods.apply(vk, ext, down, t)
 	if !down {
 		delete(pressedAt, vk)
 		return
 	}
-	now := time.Now().UnixNano()
+	now := t.UnixNano()
 	last, held := pressedAt[vk]
 	if !held || now-last > repeatGapNS {
-		queueEvent("key", keyName(vk, scan, 0), 0)
+		// v2.0.0: the extended-key flag tells right Ctrl/Alt from left. It was never passed
+		// before, so right-hand Ctrl and Alt were counted as the left-hand keys.
+		var flags uint32
+		if ext && (vk == 0x11 || vk == 0x12) {
+			flags = 1
+		}
+		queueEvent("key", keyName(vk, scan, flags), 0)
+		if isMod {
+			if countedModifier(vk) {
+				queueEvent("modkey", "", 0)
+			}
+		} else if mods.isShortcut() {
+			queueEvent("shortcut", "", 0)
+		}
 	}
 	pressedAt[vk] = now
 }
@@ -425,7 +452,7 @@ func handleRawInput(lp uintptr) {
 		if k.VKey == 0 || k.VKey == 0xFF {
 			return
 		}
-		handleKey(uint32(k.VKey), uint32(k.MakeCode), k.Flags&riKeyBreak == 0)
+		handleKey(uint32(k.VKey), uint32(k.MakeCode), k.Flags&riKeyBreak == 0, k.Flags&2 != 0) // 2 = RI_KEY_E0 (extended key)
 	case rimTypeMouse:
 		handleMouse((*rawMouse)(data))
 	}
@@ -544,7 +571,9 @@ func trayNotify(title, msg string) {
 	pShellNotifyIconW.Call(nimModify, uintptr(unsafe.Pointer(&nid)))
 }
 
-func showTrayMenu() {
+// showNativeTrayMenu is the plain Windows menu. It is only used when the themed menu
+// (traymenu.go) cannot be created.
+func showNativeTrayMenu() {
 	m, _, _ := pCreatePopupMenu.Call()
 	if m == 0 {
 		return
@@ -555,6 +584,14 @@ func showTrayMenu() {
 		label = "Resume monitoring"
 	}
 	pAppendMenuW.Call(m, mfString, menuToggle, uintptr(unsafe.Pointer(utf16p(label))))
+	storeMu.RLock()
+	liveOn := store.Settings != nil && store.Settings.OverlayOn
+	storeMu.RUnlock()
+	liveFlags := uintptr(mfString)
+	if liveOn {
+		liveFlags |= 0x8 // MF_CHECKED
+	}
+	pAppendMenuW.Call(m, liveFlags, menuLive, uintptr(unsafe.Pointer(utf16p("Floating live box"))))
 	pAppendMenuW.Call(m, mfSeparator, 0, 0)
 	pAppendMenuW.Call(m, mfString, menuExit, uintptr(unsafe.Pointer(utf16p("Exit "+appName))))
 	var p point
@@ -567,6 +604,8 @@ func showTrayMenu() {
 		showMainWindow()
 	case menuToggle:
 		setPaused(!isPaused())
+	case menuLive:
+		toggleLiveBox()
 	case menuExit:
 		shutdown()
 	}
@@ -723,7 +762,7 @@ func hostProc(h, msg, wp, lp uintptr) uintptr {
 	switch uint32(msg) {
 	case wmTray:
 		ev := uint32(lp & 0xFFFF)
-		if ev == wmLBtnDbl {
+		if ev == wmLBtnDbl || ev == wmTrayLBtnUp { // v2.0.0: a single left click opens the app
 			showMainWindow()
 			return 0
 		}
@@ -742,6 +781,12 @@ func hostProc(h, msg, wp, lp uintptr) uintptr {
 			flushForExit() // Windows is logging off or shutting down: make sure counts are on disk
 		}
 		return 0
+	case wmHotkey: // v2.0.0 global hotkeys (features.go)
+		onHotkey(wp)
+		return 0
+	case wmPowerBroadcast: // v2.0.0: resume from sleep resets the idle anchor
+		onPowerBroadcast(wp)
+		return 1
 	case wmDestroy:
 		pPostQuitMessage.Call(0)
 		return 0
@@ -787,34 +832,6 @@ func msgBox(text, title string) {
 	pMessageBoxW.Call(0, uintptr(unsafe.Pointer(utf16p(text))), uintptr(unsafe.Pointer(utf16p(title))), 0x10)
 }
 
-// breakWatcher raises a gentle tray reminder after a long stretch of continuous
-// activity. A gap of five minutes without input counts as a break.
-func breakWatcher() {
-	var workStart time.Time
-	var reminded bool
-	for range time.Tick(20 * time.Second) {
-		storeMu.RLock()
-		mins := store.Settings.BreakMinutes
-		storeMu.RUnlock()
-		last := time.Unix(0, lastEvent.Load())
-		if time.Since(last) > 5*time.Minute || last.IsZero() {
-			workStart, reminded = time.Time{}, false
-			continue
-		}
-		if workStart.IsZero() {
-			workStart = last
-		}
-		if mins > 0 && !reminded && time.Since(workStart) >= time.Duration(mins)*time.Minute {
-			reminded = true
-			trayNotify("Time for a short break", fmt.Sprintf("You have been active for about %d minutes. Stretch, breathe, and rest your eyes.", mins))
-		}
-		if mins > 0 && reminded && time.Since(workStart) >= time.Duration(mins*2)*time.Minute {
-			reminded = false
-			workStart = time.Now().Add(-time.Duration(mins) * time.Minute)
-		}
-	}
-}
-
 func main() {
 	runtime.LockOSThread()
 	for _, a := range os.Args[1:] {
@@ -829,7 +846,11 @@ func main() {
 		}
 	}
 	// Only one instance may count input, otherwise every key would be counted twice.
-	name := utf16p(`Local\KeyClickTrackerSingleton`)
+	mutexName := `Local\KeyClickTrackerSingleton`
+	if os.Getenv("KEYCLICK_DEV") == "1" && os.Getenv("KEYCLICK_DEV_MUTEX") != "" {
+		mutexName += "-" + os.Getenv("KEYCLICK_DEV_MUTEX") // test only: lets a test copy run beside the installed app
+	}
+	name := utf16p(mutexName)
 	// The error comes from this same call. A separate GetLastError call can read a value
 	// that Go's runtime has already changed, which let a second copy run and double-count.
 	_, _, mErr := pCreateMutexW.Call(0, 0, uintptr(unsafe.Pointer(name)))
@@ -841,6 +862,12 @@ func main() {
 	}
 
 	loadStore()
+	bootStep("statistics file loaded")
+	go appWatcher()    // v2.0.0 (F1): focused-program tracking (apps.go)
+	go goalWatcher()   // v2.0.0 (F7): goals in force per day (features2.go)
+	go backupWatcher() // v2.0.0 (F9): a backup copy every six hours (features2.go)
+	go reportWatcher() // v2.0.0 (F3): scheduled summaries (api2.go)
+	go strainWatcher() // v2.0.0 (F6): optional busy-stretch note (api2.go)
 	logLine(appName + " " + appVersion + " starting")
 	go ensureStartup() // keeps start-with-Windows pointing at this program
 	storeMu.RLock()
@@ -856,8 +883,11 @@ func main() {
 	}
 	onExitRequest = func() { pPostMessageW.Call(hostHWND, wmExit, 0, 0) }
 	addTrayIcon()
+	bootStep("tray icon added")
+	registerHotkeys() // v2.0.0: Ctrl+Alt+K and Ctrl+Alt+L, unless turned off in Settings
 	go recorder()
 	go inputThread() // Raw Input lives on its own thread, independent of the UI
+	bootStep("input capture started")
 	ln, err := startServer()
 	if err != nil {
 		logLine("HTTP server failed: " + err.Error())
@@ -866,6 +896,7 @@ func main() {
 		return
 	}
 	serverURL = "http://" + ln.Addr().String()
+	bootStep("local page server listening")
 	url := serverURL + "/?token=" + token
 	logLine("Local server listening at " + serverURL)
 	if os.Getenv("KEYCLICK_DEV") == "1" { // test hook: lets automated UI tests find the page
@@ -916,7 +947,7 @@ func main() {
 			pSetForegroundWindow.Call(mainHWND)
 		}
 		_ = view.Bind("kcReady", func() { reveal() })
-		onSettingsChanged = func() { view.Dispatch(syncOverlay) }
+		onSettingsChanged = func() { view.Dispatch(syncOverlay); view.Dispatch(registerHotkeys) }
 		view.Dispatch(syncOverlay) // show the live overlay at start-up if it was left enabled
 		view.Init("window.__KC_NATIVE = true;")
 		view.Navigate(url)

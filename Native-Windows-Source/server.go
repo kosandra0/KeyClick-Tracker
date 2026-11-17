@@ -69,18 +69,35 @@ type liveFrame struct {
 	Paused bool    `json:"p"`
 }
 
+// liveHeartbeat is how long the live feed may stay silent while pages are connected.
+const liveHeartbeat = 2 * time.Second
+
+// liveShouldSend decides whether the 500 ms tick sends a frame: when the speed changed, or when
+// the last frame is older than the heartbeat.
+func liveShouldSend(w, c, lastW, lastC float64, sinceLast time.Duration) bool {
+	return w != lastW || c != lastC || sinceLast >= liveHeartbeat
+}
+
+// currentLiveFrame builds the JSON of a live frame with the speeds as they are now.
+func currentLiveFrame(d pendingDelta) (b []byte, wpm, cpm float64) {
+	w, c, k := liveRates(time.Now())
+	b, _ = json.Marshal(liveFrame{d, w, c, k, isPaused()})
+	return b, w, c
+}
+
 func startBroadcaster() {
 	go func() {
 		tick := time.NewTicker(500 * time.Millisecond)
 		defer tick.Stop()
 		var lastW, lastC float64
+		var lastSent time.Time
 		send := func(d pendingDelta) {
 			if !hasSubs() {
 				return
 			}
-			w, c, k := liveRates(time.Now())
-			b, _ := json.Marshal(liveFrame{d, w, c, k, isPaused()})
+			b, w, c := currentLiveFrame(d)
 			lastW, lastC = w, c
+			lastSent = time.Now()
 			broadcast(b)
 		}
 		for {
@@ -96,7 +113,10 @@ func startBroadcaster() {
 				}
 			case <-tick.C:
 				w, c, _ := liveRates(time.Now())
-				if w != lastW || c != lastC {
+				// Also send when nothing changed but a while has passed: if one frame was lost
+				// (page reconnecting, hidden window), the next one corrects the display. Without
+				// this a lost "0" frame left the speed stuck until the next key press.
+				if liveShouldSend(w, c, lastW, lastC, time.Since(lastSent)) {
 					send(pendingDelta{})
 				}
 			}
@@ -125,6 +145,10 @@ func sseHandler(w http.ResponseWriter, r *http.Request) {
 		subsMu.Unlock()
 	}()
 	fmt.Fprint(w, "retry: 800\n\n")
+	// A page that connects or reconnects gets the current speed at once, so it never keeps
+	// showing a number from before the connection was lost.
+	first, _, _ := currentLiveFrame(pendingDelta{})
+	fmt.Fprintf(w, "data: %s\n\n", first)
 	fl.Flush()
 	ping := time.NewTicker(15 * time.Second)
 	defer ping.Stop()
@@ -411,9 +435,35 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		ct := store.CloseToTray
 		storeMu.RUnlock()
 		writeJSON(w, map[string]any{"paused": isPaused(), "agentConnected": hooksOK(), "monitoring": !isPaused(), "closeToTray": ct,
-			"dataPath": dataPath, "version": appVersion, "name": appName, "startup": startupEnabled()})
+			"dataPath": dataPath, "version": appVersion, "name": appName, "startup": startupEnabled(), "quiet": quietNow()})
 	case "/api/stats":
 		writeJSON(w, buildStats(q))
+	case "/api/idle": // v2.0.0 (F2): active and idle time for the range
+		writeJSON(w, idleStats(q))
+	case "/api/health": // v2.0.0 (F10): read-only data health check
+		writeJSON(w, healthStats())
+	case "/api/hotkeys": // v2.0.0 (F12): status of the global hotkeys
+		writeJSON(w, hotkeysJSON())
+	case "/api/apps": // v2.0.0 (F1): per-program totals
+		writeJSON(w, appsJSON(q))
+	case "/api/backups/preview": // v2.0.0 (F9): read-only look at a backup
+		status, body := backupPreview(q.Get("name"))
+		writeJSONStatus(w, status, body)
+	case "/api/backups/restore": // v2.0.0 (F9): saves current data first, then restores
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", 405)
+			return
+		}
+		var in struct {
+			Name    string `json:"name"`
+			Confirm string `json:"confirm"`
+		}
+		if err := json.NewDecoder(io.LimitReader(r.Body, 1<<12)).Decode(&in); err != nil {
+			writeJSONStatus(w, http.StatusBadRequest, map[string]any{"error": "Bad request. Nothing was changed."})
+			return
+		}
+		status, body := restoreBackup(in.Name, in.Confirm)
+		writeJSONStatus(w, status, body)
 	case "/api/live":
 		sseHandler(w, r)
 	case "/api/settings":
@@ -435,6 +485,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			storeMu.Lock()
+			applyOverlayPreset(store.Settings, &s) // F13: each preset remembers its own size
 			*store.Settings = s
 			if in.CloseToTray != nil {
 				store.CloseToTray = *in.CloseToTray
@@ -547,7 +598,11 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		n, _ := strconv.Atoi(first(q, "n", "1"))
 		for i := 0; i < n && i < 10000; i++ {
-			record(first(q, "kind", "key"), first(q, "id", "A"), 1)
+			if k := first(q, "kind", "key"); k == "shortcut" || k == "modkey" {
+				recordCombo(k) // test hook for the F4 counters
+			} else {
+				record(k, first(q, "id", "A"), 1)
+			}
 		}
 		writeJSON(w, map[string]int{"injected": n})
 	case "/api/exit":
@@ -556,6 +611,9 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusAccepted)
 	default:
+		if api2Handler(w, r, q) { // v2.0.0 endpoints (api2.go)
+			return
+		}
 		http.NotFound(w, r)
 	}
 }

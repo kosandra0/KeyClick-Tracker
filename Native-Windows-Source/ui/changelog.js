@@ -1,6 +1,41 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.0.0', date: '2026-11-16', title: 'Tray menu, reminders, summaries, practice and more',
+    intro: 'The first major release of KeyClick Tracker. Your existing history is kept: a backup is made before the first start of this version, and the statistics file format is extended without removing anything. Everything below is new in this version unless it is marked as fixed.',
+    items: [
+      ['new', 'Tray icon: a single left click now opens the app. You no longer need to right-click and choose Open.'],
+      ['new', 'Tray menu: it now has a Floating live box switch, so you can turn the live box on or off directly. After a break reminder it also offers Remind me in 5 minutes.'],
+      ['improved', 'Tray menu look: the menu has rounded corners and uses the colours of the theme you picked in Appearance.'],
+      ['new', 'Active and idle time. A pause longer than the idle threshold (1 to 60 minutes, set in Settings, default 5) is counted as idle time, not work. Overview shows the active and idle time for today. Idle time does not change words per minute or clicks per minute. Time while counting was paused, and the time the PC slept, is not counted as idle.'],
+      ['new', 'By application. Overview shows which programs received your keys, clicks and scrolls today. Only the program file name is stored, never window titles or what you type. You can turn it off in Settings; the totals keep counting either way.'],
+      ['new', 'Shortcuts. The Keyboard page shows how many key presses were Ctrl, Alt or Windows combinations and what share of your keys they are. Shift alone does not count. Keyboards where AltGr sends Ctrl+Alt are not counted as shortcuts.'],
+      ['new', 'Keyboard layouts. The Keyboard page lists the layouts you typed on. Only the layout name is kept. You can turn it off in Settings.'],
+      ['new', 'Goals. Add a typing speed goal in Settings. Overview shows a 30-day goal history (one square per day) and your goal streak. Changing a goal never rewrites past days.'],
+      ['new', 'Day timeline. Overview shows your activity hour by hour for today, or for any day you pick.'],
+      ['new', 'Quiet hours. Choose hours (for example 23:00 to 07:00) when counting is paused. Nothing is deleted, and the status pill shows Quiet hours.'],
+      ['new', 'Busy-stretch notes (off by default). A gentle suggestion when your busiest 10 minutes are unusually high compared with your own last 30 days. It needs 14 days of data, it is only a suggestion and never a diagnosis, and it can also appear once a day as a tray note.'],
+      ['new', 'Break reminders. Choose a work and rest cycle, not just a single reminder. A reminder never appears during idle time or while a full-screen program is in front, and you can snooze it from the tray menu.'],
+      ['new', 'Summaries. Get a short report every evening at 18:00 (today so far) or every Monday at 09:00 (last week, with the change from the week before). It lists totals, active and idle time, your best hour and top programs, and can also be saved as a .md file in Backups\\Reports. You can also make one at any time in Settings. Only counts are used.'],
+      ['new', 'Health check on the Data page. It reports whether the statistics file reads correctly, the file size, when it was last saved, the number of backups, the browser cache size, free disk space and whether input counting is running. It only reads; it never changes anything.'],
+      ['new', 'Backup preview and restore. On Data and Backup, each backup has a Preview button (totals and date range, nothing changes) and a Restore button. Restore asks you to type RESTORE, saves your current data as a new backup first, and never changes the backup you restore from.'],
+      ['new', 'Scheduled backups. One backup a day is kept for as many days as you choose (7 to 90, default 14), and a copy is also made every six hours while the app runs (the latest eight are kept). Other backups are never removed.'],
+      ['new', 'Import preview. Before a file is imported, you see what it contains and what would change, and nothing is changed until you confirm.'],
+      ['new', 'CSV export of daily totals for spreadsheets. It is an export only: it cannot be imported and is not a backup. Backups and imports stay JSON, TXT and MD.'],
+      ['new', 'Displays and start-up. The Data page lists your screens with their scale and shows the start-up steps of this session, which helps when the live box or a hotkey is not where you expect.'],
+      ['new', 'Global hotkeys: Ctrl+Alt+K shows or hides the main window, and Ctrl+Alt+L turns the floating live box on or off. They work from any program. Settings shows whether each one is active. If another program already uses a combination, the app says so and keeps running.'],
+      ['new', 'Live box styles: compact (one line), detailed, or sparkline (with a 60-second activity line). Each style remembers its own size. Choose in Settings, or right-click the live box to switch to the next style.'],
+      ['new', 'Typing practice. A new Practice page with short lessons that score your speed and accuracy. Only the scores are saved: what you type there is never stored.'],
+      ['improved', 'Keyboard focus is clearly visible, and animations are reduced when Windows is set to reduce motion.'],
+      ['improved', 'Goal values and other settings are kept within a safe range when saved.'],
+      ['fixed', 'Typing speed stuck at a number such as 5 or 2 while the PC is idle, in the app and in the floating live box. The speed now returns to 0 after a short pause, even if a screen update was missed.'],
+      ['fixed', 'Right Ctrl and right Alt were counted as the left keys. They are now counted separately.'],
+      ['fixed', 'The hour-of-day charts and the weekly rhythm were shifted by half an hour for time zones such as India (UTC+5:30). New activity is now counted in the correct hour. Older activity is kept as it is.'],
+      ['fixed', 'If saving at exit fails, the reason is now written to the log instead of being ignored.'],
+      ['changed', 'The statistics file uses format version 4. The new fields are optional, so older files load unchanged, and a backup is made at the first start of this version. Version 1.x cannot read version 4 files: keep that backup if you ever go back.']
+    ]
+  },
+  {
     version: '1.2.3', date: '2026-11-15', title: 'The live box stays on top and stays on screen',
     intro: 'Closing the window to the system tray no longer makes the floating live box disappear. The live box now stays on top of other windows until you turn it off in Settings or quit the app from the tray.',
     items: [

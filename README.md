@@ -6,14 +6,17 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 
 **It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope\activity.json`, and nothing is sent anywhere.
 
-## Latest release: 1.2.3
+## Latest release: 2.0.0
 
-**[Download KeyClick Tracker 1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3)**
+**[Download KeyClick Tracker 2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0)**
 
-- **Fixed:** the floating live box no longer disappears when the main window is closed to the system tray, or when you use another window. It stays on screen and on top until you turn it off in Settings or quit from the tray menu.
-- Checksums for the release files are in `SHA256SUMS.txt` on the release page.
+- **New:** a single left click on the tray icon opens the app, and the tray menu has a Floating live box switch and rounded corners in your theme.
+- **New:** tray menu and global hotkeys (Ctrl+Alt+K, Ctrl+Alt+L), idle time, per-application counts, break reminders, summaries, scheduled backups with preview and restore, typing practice, CSV export and more.
+- **Fixed:** typing speed no longer gets stuck at a number such as 5 or 2 while the PC is idle.
+- Your existing data is kept. A backup is made before the first start of this version. Version 1.x cannot read the new file format, so keep that backup if you go back.
+- The full list of changes is in the release notes and in the app's update log. Checksums are in `SHA256SUMS.txt` on the release page.
 
-Earlier releases: [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
+Earlier releases: [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
 ## Download and install
 

@@ -35,11 +35,11 @@
   KC.icon = svg;
 
   const NAV = [
-    ['WORKSPACE'], ['overview', 'Overview', 'grid'], ['keyboard', 'Keyboard', 'keyboard'], ['mouse', 'Mouse', 'mouse'], ['speed', 'Speed', 'speed'], ['history', 'History', 'calendar'], ['analytics', 'Analytics', 'chart'],
+    ['WORKSPACE'], ['overview', 'Overview', 'grid'], ['keyboard', 'Keyboard', 'keyboard'], ['mouse', 'Mouse', 'mouse'], ['speed', 'Speed', 'speed'], ['history', 'History', 'calendar'], ['analytics', 'Analytics', 'chart'], ['practice', 'Practice', 'target'],
     ['YOUR DATA'], ['data', 'Data & Backup', 'data'],
     ['PREFERENCES'], ['appearance', 'Appearance', 'palette'], ['settings', 'Settings', 'settings'], ['updates', 'Update Log', 'log'], ['about', 'About', 'info']
   ];
-  const TITLES = { overview: 'Overview', keyboard: 'Keyboard', mouse: 'Mouse', speed: 'Speed', history: 'History', analytics: 'Analytics', data: 'Data & Backup', appearance: 'Appearance', settings: 'Settings', updates: 'Update Log', about: 'About' };
+  const TITLES = { overview: 'Overview', keyboard: 'Keyboard', mouse: 'Mouse', speed: 'Speed', history: 'History', analytics: 'Analytics', practice: 'Practice', data: 'Data & Backup', appearance: 'Appearance', settings: 'Settings', updates: 'Update Log', about: 'About' };
   KC.buildNav = function () {
     $('#nav').innerHTML = '<span class="nav-ind" id="nav-ind"></span>' + NAV.map(n => n.length === 1
       ? '<div class="nav-caption">' + n[0] + '</div>'
@@ -228,6 +228,8 @@
         '<div class="speed-row" style="--i:2"><div class="panel speed-big"><div class="unit">Typing speed now</div><div class="num"><span data-odo="live.wpm" data-conv="w"></span><small class="ulab" data-unit="w"></small></div><div class="unit sm"><span data-unitname="w"></span> · last few seconds</div><div class="meter"><i id="m-wpm"></i></div></div>' +
         '<div class="panel speed-big"><div class="unit">Click rate now</div><div class="num"><span data-odo="live.cpm" data-conv="c"></span><small class="ulab" data-unit="c"></small></div><div class="unit sm"><span data-unitname="c"></span> · last few seconds</div><div class="meter"><i id="m-cpm"></i></div></div>' +
         '<div class="panel"><div class="panel-head" style="margin-bottom:6px"><div class="panel-title">Pace in this period</div></div><div class="kv"><div class="k">Overall <span data-unit="w"></span></div><div class="v"><span data-odo="stats.rates.overallWpm" data-dec="1" data-conv="w"></span></div><div class="k">Average <span data-unit="w"></span></div><div class="v"><span data-odo="stats.rates.avgWpm" data-dec="1" data-conv="w"></span></div><div class="k">Overall <span data-unit="c"></span></div><div class="v"><span data-odo="stats.rates.overallCpm" data-dec="1" data-conv="c"></span></div><div class="k">Average <span data-unit="c"></span></div><div class="v"><span data-odo="stats.rates.avgCpm" data-dec="1" data-conv="c"></span></div></div></div></div>' +
+        '<section class="panel section-gap" style="--i:4"><div class="panel-head"><div><div class="panel-title">Active vs idle</div><div class="panel-hint">Idle means a pause longer than your threshold in Settings. Idle time is not counted as work.</div></div></div><div id="idle-card"><div class="empty-mini">Loading…</div></div></section>' +
+        '<section class="panel section-gap" style="--i:4"><div class="panel-head"><div><div class="panel-title">By application</div><div class="panel-hint">Which programs received your typing and clicks today. Only the program file name is kept, never window titles or what you typed.</div></div></div><div id="app-card"><div class="empty-mini">Loading…</div></div></section>' +
         '<div class="section-gap">' + chartPanel('Activity over time', 'Each bar is one ' + ({ hour: 'hour', daily: 'day', weekly: 'week', monthly: 'month', quarterly: 'quarter', yearly: 'year' }[state.unit]) + '. It grows as you work.') + '</div>' +
         '<div class="grid split-grid section-gap" style="--i:5"><section class="panel"><div class="panel-head"><div><div class="panel-title">Daily goals</div><div class="panel-hint">Gentle targets you can change in Settings.</div></div><div class="streak-num" style="--c:var(--amber)"><span data-odo="all.streak.current"></span><small>day streak</small></div></div><div id="goals"></div></section>' +
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Little observations</div><div class="panel-hint">Noticed from your own numbers.</div></div></div><div id="insights"></div></section></div>' +
@@ -240,8 +242,33 @@
       inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); });
       $('#clock', root).addEventListener('click', () => { clockOdo = null; $('#clock-time').replaceChildren(); KC.saveSettings({ clock_24h: !state.settings.clock_24h }); tickClock(); });
       clockOdo = null; tickClock(); clearInterval(clockTimer); clockTimer = setInterval(tickClock, 1000);
+      pages.overview.refreshIdle(); pages.overview.refreshApps(); clearInterval(pages.overview._idle); pages.overview._idle = setInterval(() => { pages.overview.refreshIdle(); pages.overview.refreshApps(); }, 30000);
     },
-    unmount() { clearInterval(clockTimer); },
+    unmount() { clearInterval(clockTimer); clearInterval(pages.overview._idle); },
+    async refreshApps() {
+      const box = document.getElementById('app-card'); if (!box) return;
+      try {
+        const r = await api('/api/apps?range=today&limit=8');
+        if (!r.tracking) { box.innerHTML = '<div class="empty-mini">Application tracking is off. Turn it on in Settings.</div>'; return; }
+        if (!r.apps.length) { box.innerHTML = '<div class="empty-mini">Nothing recorded for any program yet today.</div>'; return; }
+        const top = Math.max(1, ...r.apps.map(a => a.keys + a.clicks + a.scroll));
+        box.innerHTML = r.apps.map(a => { const n = a.keys + a.clicks + a.scroll; return '<div class="file-row"><span class="selectable">' + esc(a.name) + '</span><span style="flex:1;margin:0 12px;height:8px;border-radius:999px;background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:' + Math.round(100 * n / top) + '%;background:var(--accent)"></i></span><span class="muted">' + Number(a.keys).toLocaleString() + ' keys · ' + Number(a.clicks).toLocaleString() + ' clicks</span></div>'; }).join('') +
+          (r.other_keys ? '<div class="panel-hint" style="margin-top:8px">' + Number(r.other_keys).toLocaleString() + ' keys are not tied to a program (typed in this window, or counted before tracking existed).</div>' : '');
+      } catch (e) { box.innerHTML = '<div class="empty-mini">Could not load this card.</div>'; }
+    },
+    async refreshIdle() {
+      const box = document.getElementById('idle-card'); if (!box) return;
+      const fmtDur = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return h ? h + ' h ' + m + ' m' : m + ' m'; };
+      try {
+        const r = await api('/api/idle?range=today');
+        const tot = r.active_sec + r.idle_sec;
+        if (!tot) { box.innerHTML = '<div class="empty-mini">No activity recorded yet for this period.</div>'; return; }
+        const pct = Math.round(100 * r.active_sec / tot);
+        box.innerHTML = '<div style="display:flex;height:12px;border-radius:999px;overflow:hidden;background:var(--line)"><i style="width:' + pct + '%;background:var(--accent);display:block"></i></div>' +
+          '<div class="kv" style="margin-top:10px"><div class="k">Active</div><div class="v">' + fmtDur(r.active_sec) + '</div><div class="k">Idle</div><div class="v">' + fmtDur(r.idle_sec) + '</div><div class="k">Share active</div><div class="v">' + pct + '%</div></div>' +
+          '<div class="panel-hint" style="margin-top:8px">Idle after ' + r.idle_minutes_setting + ' minutes without input.</div>';
+      } catch (e) { box.innerHTML = '<div class="empty-mini">Could not load this card.</div>'; }
+    },
     update(root) {
       drawChart($('#main-chart', root));
       setHTML($('#goals', root), goalsHTML());
@@ -403,6 +430,7 @@
     }
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); return true;
   }
+  KC.saveFile = saveFile;   // v2.0.0: shared with ui/v2.js (CSV export)
   async function doExport(format) {
     try {
       const r = await api('/api/export?' + KC.statsQuery({ format }));
@@ -420,7 +448,9 @@
     }
     const mode =($('input[name=imode]:checked') || {}).value || 'merge';
     let text; try { text = await file.text(); } catch (e) { toast('Could not read that file.'); return; }
-    if (mode === 'replace') {
+    // v2.0.0 (A4): show what the file contains and what would change before anything is imported.
+    if (KC.importPreviewModal) { if (!(await KC.importPreviewModal(text, mode, file.name))) return; }
+    else if (mode === 'replace') {
       const ok = await modal({ title: 'Replace all current data?', body: '<p>Everything currently recorded will be replaced by the contents of <b>' + esc(file.name) + '</b>. A safety backup of your current data is saved first.</p>', actions: [{ label: 'Cancel', value: false }, { label: 'Replace data', value: true, primary: true, danger: true }] });
       if (!ok) return;
     }
@@ -435,6 +465,7 @@
     html() {
       const fmtCard = (f, t, d) => '<button class="fmt-card" data-export="' + f + '"><span class="fmt-tag">' + t + '</span><b>' + d[0] + '</b><small>' + d[1] + '</small></button>';
       return '<div class="page-wrap">' + header('YOUR DATA', 'Export, import and back up', 'Your history belongs to you. Take a copy, move it to another computer, or restore it.', rangeControls()) +
+        '<section class="panel" style="--i:0"><div class="panel-head"><div><div class="panel-title">Health</div><div class="panel-hint">A read-only check of your statistics file, backups and disk space. Nothing is changed by this check.</div></div><div class="header-controls"><button class="btn" data-act="health-refresh">' + svg('refresh') + 'Check again</button></div></div><div class="file-list" id="health"><div class="empty-mini">Checking…</div></div></section>' +
         '<section class="panel" style="--i:1"><div class="panel-head"><div><div class="panel-title">Export</div><div class="panel-hint">The summary covers the date range above. Every file also carries your full history so it can be restored.</div></div></div><div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">' +
         fmtCard('json', 'JSON', ['Full backup', 'Complete and exact. Best for moving to another PC.']) + fmtCard('md', 'MARKDOWN', ['Readable report', 'A tidy write-up with the data tucked in at the end.']) + fmtCard('txt', 'TEXT', ['Plain-text report', 'Opens anywhere. Also restorable.']) + '</div></section>' +
         '<section class="panel section-gap" style="--i:2"><div class="panel-head"><div><div class="panel-title">Import</div><div class="panel-hint">Only .json, .txt and .md files are accepted. Choose a file exported from KeyClick Tracker (or an old KeyScope data file).</div></div></div>' +
@@ -445,17 +476,27 @@
     },
     mount(root) {
       pages.data.refreshBackups();
+      pages.data.refreshHealth();
       const drop = $('#drop', root), inp = $('#file-in', root);
       inp.onchange = () => { doImport(inp.files[0]); inp.value = ''; };
       ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
       ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
       drop.addEventListener('drop', e => doImport(e.dataTransfer.files[0]));
     },
+    async refreshHealth() {
+      const box = document.getElementById('health'); if (!box) return;
+      const word = l => l === 'ok' ? 'OK' : (l === 'amber' ? 'Needs a look' : 'Needs action');
+      try {
+        const h = await api('/api/health');
+        box.innerHTML = '<div class="file-row"><span><b>Overall: ' + esc(word(h.status)) + '</b></span></div>' +
+          (h.checks || []).map(c => '<div class="file-row"><span>' + esc(word(c.level)) + ': ' + esc(c.text) + '</span></div>').join('');
+      } catch (e) { box.innerHTML = '<div class="empty-mini">Could not run the health check.</div>'; }
+    },
     async refreshBackups() {
       const box = $('#backups'); if (!box) return;
       try {
         const list = await api('/api/backups');
-        box.innerHTML = list.length ? list.slice(0, 12).map(b => '<div class="file-row"><span class="selectable">' + esc(b.name) + '</span><span class="muted">' + (b.size / 1024).toFixed(1) + ' KB · ' + KC.timeAgo(b.modified) + '</span></div>').join('') + (list.length > 12 ? '<div class="file-row muted">… and ' + (list.length - 12) + ' older ones in the folder</div>' : '') : '<div class="empty-mini">No backups yet.</div>';
+        box.innerHTML = list.length ? list.slice(0, 12).map(b => '<div class="file-row"><span class="selectable">' + esc(b.name) + '</span><span class="muted">' + (b.size / 1024).toFixed(1) + ' KB · ' + KC.timeAgo(b.modified) + '</span><span class="header-controls"><button class="btn" data-act="bk-preview" data-name="' + esc(b.name) + '">Preview</button><button class="btn danger" data-act="bk-restore" data-name="' + esc(b.name) + '">Restore…</button></span></div>').join('') + (list.length > 12 ? '<div class="file-row muted">… and ' + (list.length - 12) + ' older ones in the folder</div>' : '') : '<div class="empty-mini">No backups yet.</div>';
       } catch (e) { box.innerHTML = '<div class="empty-mini">Could not list backups.</div>'; }
     },
     doExport, doImport
@@ -510,6 +551,9 @@
         '<div class="setting-row"><div><div class="setting-title">Record activity</div><div class="setting-help">Turn off to pause counting. The tray icon has the same switch.</div></div>' + sw('s-rec', !ss.paused) + '</div>' +
         '<div class="setting-row"><div><div class="setting-title">Keep running in the tray when closed</div><div class="setting-help">Closing the window hides it and keeps counting. Turn off to quit when the window closes.</div></div>' + sw('s-tray', ss.closeToTray !== false) + '</div>' +
         '<div class="setting-row"><div><div class="setting-title">Start with Windows</div><div class="setting-help">Launch quietly in the tray when you sign in.</div></div>' + sw('s-startup', ss.startup) + '</div>' +
+        '<div class="setting-row"><div><div class="setting-title">Count by application</div><div class="setting-help">Keeps how much each program (for example notepad.exe) received. Only the program file name is stored, never window titles or what you type. Turn off to stop adding new per-program counts; totals still count.</div></div>' + sw('s-apptrack', !st.app_tracking_off) + '</div>' +
+        '<div class="setting-row"><div><div class="setting-title">Global hotkeys</div><div class="setting-help">Ctrl+Alt+K shows or hides this window. Ctrl+Alt+L turns the floating live box on or off. They work from any program.</div><div class="setting-help" id="hk-status">Checking…</div></div>' + sw('s-hotkey', !st.hotkey_off) + '</div>' +
+        '<div class="setting-row"><div><div class="setting-title">Idle after (minutes)</div><div class="setting-help">A pause longer than this counts as idle time, not work. Choose from 1 to 60.</div></div><input class="text-input num-input" type="number" min="1" max="60" step="1" id="idle-min" value="' + (st.idle_minutes || 5) + '"></div>' +
         '<div class="setting-row"><div><div class="setting-title">Floating live box</div><div class="setting-help">A small rounded box with your live speed that stays on top of every window, even while this app sits in the tray. Drag it anywhere, pull its bottom-right corner to resize it, and hover to reveal the ✕ that closes it.</div></div>' + sw('s-overlay', st.overlay_on) + '</div></section>' +
         '<section class="panel section-gap" style="--i:2"><div class="panel-head"><div><div class="panel-title">Measuring units</div><div class="panel-hint">Pick how speed is shown everywhere, including the floating box.</div></div></div>' +
         '<div class="setting-row"><div><div class="setting-title">Typing speed</div><div class="setting-help">Words are counted as five characters each.</div></div>' + sel('u-typing', [['wps', 'WPS · words per second'], ['wpm', 'WPM · words per minute'], ['wph', 'WPH · words per hour']], st.typing_unit) + '</div>' +
@@ -538,6 +582,19 @@
       };
       const num = (id, key) => { const el = $('#' + id, root); el.onchange = () => { const v = Math.max(0, Math.round(+el.value || 0)); el.value = v; KC.saveSettings({ [key]: v }).then(() => KC.refreshBindings()); }; };
       num('g-keys', 'goal_keys'); num('g-clicks', 'goal_clicks'); num('g-break', 'break_minutes');
+      const idleEl = $('#idle-min', root);
+      idleEl.onchange = () => { const v = Math.min(60, Math.max(1, Math.round(+idleEl.value || 5))); idleEl.value = v; KC.saveSettings({ idle_minutes: v }); toast('Pauses longer than ' + v + ' minutes now count as idle.'); };
+      const hkStatus = async () => {
+        const el = $('#hk-status', root); if (!el) return;
+        try {
+          const h = await api('/api/hotkeys');
+          const t = x => x.status === 'registered' ? 'active' : (x.status === 'off' ? 'off' : 'not active (' + (x.reason || x.status) + ')');
+          el.textContent = 'Main window: ' + t(h.main_window) + ' · Live box: ' + t(h.live_box);
+        } catch (e) { el.textContent = 'Hotkey status unavailable.'; }
+      };
+      hkStatus();
+      chk('s-apptrack', async on => { await KC.saveSettings({ app_tracking_off: !on }); toast(on ? 'Counting by application is on.' : 'Counting by application is off. Totals still count.'); });
+      chk('s-hotkey', async on => { await KC.saveSettings({ hotkey_off: !on }); setTimeout(hkStatus, 400); toast(on ? 'Global hotkeys are on.' : 'Global hotkeys are off.'); });
     }
   };
 
@@ -636,8 +693,11 @@
       case 'tt-new': return ttStart();
       case 'pick-file': return $('#file-in').click();
       case 'open-folder': try { await api('/api/openfolder', { method: 'POST' }); } catch (err) { toast('Could not open the folder.'); } return;
+      case 'health-refresh': pages.data.refreshHealth(); return;
       case 'backup-now': try { const r = await api('/api/backups', { method: 'POST' }); toast('Backup saved: ' + r.created); pages.data.refreshBackups(); } catch (err) { toast('Backup failed: ' + err.message); } return;
       case 'clear-data': return KC.clearData();
+      case 'bk-preview': return KC.previewBackup(b.dataset.name);
+      case 'bk-restore': return KC.restoreBackup(b.dataset.name);
     }
   });
   KC.clearData = async function () {
@@ -655,5 +715,39 @@
     root.classList.remove('open'); root.innerHTML = '';
     if (!result) return;
     try { const r = await api('/api/data', { method: 'DELETE', body: JSON.stringify({ confirm: 'DELETE' }) }); await KC.resync(); KC.setPage(state.page, true); toast('History cleared. Backup: ' + r.backup); } catch (err) { toast('Nothing was deleted: ' + err.message); }
+  };
+  // F9: preview a backup (read only), then restore it only after the typed word RESTORE.
+  const fmtN = n => Number(n || 0).toLocaleString();
+  KC.previewBackup = async function (name) {
+    const root = $('#modal-root');
+    let p;
+    try { p = await api('/api/backups/preview?name=' + encodeURIComponent(name)); } catch (err) { return toast('This backup cannot be previewed. Nothing was changed.'); }
+    const t = p.totals || {}, span = p.date_range || {};
+    root.innerHTML = '<div class="modal"><h3>Backup preview</h3><p class="selectable">' + esc(name) + '</p>' +
+      '<div class="kv"><div class="k">Keys</div><div class="v">' + fmtN(t.keys) + '</div><div class="k">Clicks</div><div class="v">' + fmtN(t.clicks) + '</div><div class="k">Scrolls</div><div class="v">' + fmtN(t.scroll) + '</div><div class="k">Words</div><div class="v">' + fmtN(t.words) + '</div><div class="k">Active minutes</div><div class="v">' + fmtN(t.active_min) + '</div><div class="k">Days</div><div class="v">' + esc(span.from || '—') + ' to ' + esc(span.to || '—') + '</div></div>' +
+      '<div class="actions"><button class="btn" id="c-no">Close</button><button class="btn danger" id="c-restore">Restore this backup…</button></div></div>';
+    root.classList.add('open');
+    $('#c-no', root).onclick = () => { root.classList.remove('open'); root.innerHTML = ''; };
+    $('#c-restore', root).onclick = () => { root.classList.remove('open'); root.innerHTML = ''; KC.restoreBackup(name); };
+    root.onclick = ev => { if (ev.target === root) { root.classList.remove('open'); root.innerHTML = ''; } };
+  };
+  KC.restoreBackup = async function (name) {
+    const root = $('#modal-root');
+    const ok = await new Promise(resolve => {
+      root.innerHTML = '<div class="modal"><h3>Restore this backup?</h3><p>Your current data is saved as a new backup first. Nothing is deleted, and the backup you choose is not changed.</p><p>The history and settings in this backup replace the current ones.</p><p>Type <b>RESTORE</b> to confirm.</p><input class="text-input" id="confirm-in" autocomplete="off" placeholder="RESTORE"><div class="actions"><button class="btn" id="c-no">Cancel</button><button class="btn danger" id="c-yes" disabled>Restore</button></div></div>';
+      root.classList.add('open');
+      const inp = $('#confirm-in', root), yes = $('#c-yes', root);
+      inp.oninput = () => { yes.disabled = inp.value.trim() !== 'RESTORE'; };
+      $('#c-no', root).onclick = () => resolve(false); yes.onclick = () => resolve(true);
+      root.onclick = ev => { if (ev.target === root) resolve(false); };
+      setTimeout(() => inp.focus(), 60);
+    });
+    root.classList.remove('open'); root.innerHTML = '';
+    if (!ok) return;
+    try {
+      const r = await api('/api/backups/restore', { method: 'POST', body: JSON.stringify({ name, confirm: 'RESTORE' }) });
+      await KC.resync(); KC.setPage(state.page, true);
+      toast('Restored. Your data before the restore is saved as ' + r.before_restore + '.');
+    } catch (err) { toast('Not restored. ' + err.message); }
   };
 })();

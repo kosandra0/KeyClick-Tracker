@@ -17,9 +17,9 @@ import (
 // process, so it keeps working while the main window is hidden in the tray.
 
 var (
-	pSetLayered        = user32.NewProc("SetLayeredWindowAttributes")
-	pMonitorFromPoint  = user32.NewProc("MonitorFromPoint")
-	pIsIconic          = user32.NewProc("IsIconic")
+	pSetLayered       = user32.NewProc("SetLayeredWindowAttributes")
+	pMonitorFromPoint = user32.NewProc("MonitorFromPoint")
+	pIsIconic         = user32.NewProc("IsIconic")
 
 	ovView     webview2.WebView
 	ovHWND     uintptr
@@ -179,8 +179,33 @@ func syncOverlay() {
 		return
 	}
 	pShowWindow.Call(ovHWND, 8) // SW_SHOWNA: show without taking focus
-	if ovView != nil { // apply theme / font / unit changes straight away
+	applyOverlayPresetSize()    // v2.0.0 (F13): a changed style brings its own size
+	if ovView != nil {          // apply theme / font / unit changes straight away
 		ovView.Eval("window.kcOvReload&&kcOvReload()")
+	}
+}
+
+// ovPresetApplied is the live box style whose size is currently applied to the window.
+var ovPresetApplied string
+
+// applyOverlayPresetSize resizes the box when the style changed. The size comes from the
+// settings (applyOverlayPreset already stored each style's own size there). A size you dragged
+// to is not touched by other setting changes, because this runs only when the style changes.
+func applyOverlayPresetSize() {
+	storeMu.RLock()
+	preset, wDip, hDip := store.Settings.OverlayPreset, store.Settings.OverlayW, store.Settings.OverlayH
+	storeMu.RUnlock()
+	if preset == ovPresetApplied || ovHWND == 0 {
+		return
+	}
+	ovPresetApplied = preset
+	dpi := dpiOf(ovHWND)
+	w, h := wDip*dpi/96, hDip*dpi/96
+	var r rect
+	pGetWindowRect.Call(ovHWND, uintptr(unsafe.Pointer(&r)))
+	if abs(int(r.Right-r.Left)-w) > 1 || abs(int(r.Bottom-r.Top)-h) > 1 {
+		pSetWindowPos.Call(ovHWND, 0, 0, 0, uintptr(w), uintptr(h), 0x0002|0x0004|0x0010) // SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE
+		overlayRegion(ovHWND)
 	}
 }
 
@@ -188,6 +213,7 @@ func createOverlay() {
 	storeMu.RLock()
 	st := *store.Settings
 	storeMu.RUnlock()
+	ovPresetApplied = st.OverlayPreset // the window is created at this style's size
 	v := webview2.NewWithOptions(webview2.WebViewOptions{
 		DataPath:      filepath.Join(dataDir, "WebViewProfile"),
 		WindowOptions: webview2.WindowOptions{Title: appName + " Live", Width: uint(st.OverlayW), Height: uint(st.OverlayH), IconId: iconResourceID},

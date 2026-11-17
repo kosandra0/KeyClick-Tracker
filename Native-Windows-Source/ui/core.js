@@ -284,7 +284,19 @@
     if (typeof window.kcOpen === 'function') window.kcOpen(url);
     else window.open(url, '_blank', 'noopener');
   };
+  /* Safety net for the speed display: the server sends a frame at least every 2 s. If none has
+     arrived for 5 s (connection lost, page was hidden), the old speed is wrong: show 0. */
+  let lastFrameAt = Date.now();
+  setInterval(() => {
+    const l = state.live;
+    if (Date.now() - lastFrameAt > 5000 && l && (l.wpm || l.cpm || l.kpm)) {
+      state.live = { wpm: 0, cpm: 0, kpm: 0 };
+      const chip = $('#live-chip'); if (chip) chip.classList.remove('active');
+      KC.schedulePaint();
+    }
+  }, 1000);
   function onFrame(f) {
+    lastFrameAt = Date.now();
     state.live = { wpm: f.wpm || 0, cpm: f.cpm || 0, kpm: f.kpm || 0 };
     $('#live-chip').classList.toggle('active', (f.wpm || 0) + (f.cpm || 0) > 0);
     const any = (f.k || 0) + (f.c || 0) + (f.s || 0);
