@@ -1,6 +1,6 @@
 ﻿# KeyClick Tracker
 
-<p align="center"><img width="256" height="256" alt="KeyClick Tracker logo" src="https://raw.githubusercontent.com/kosandra0/KeyClick-Tracker/main/assets/logo-rounded.png" /></p>
+<p align="center"><img width="512" height="512" alt="KeyClick Tracker logo" src="https://raw.githubusercontent.com/kosandra0/KeyClick-Tracker/main/assets/logo-rounded.png" /></p>
 
 _A quiet, private Windows app that counts your key presses, mouse clicks and scrolls, so you can see the shape of your day._
 
