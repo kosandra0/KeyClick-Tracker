@@ -480,7 +480,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			s := in.Settings
-			if len(s.Theme) > 40 || len(s.Font) > 40 || len(s.OverlayTheme) > 40 {
+			if len(s.Theme) > 40 || len(s.Font) > 40 || len(s.OverlayTheme) > 40 || len(s.AppLogo) > 60 {
 				http.Error(w, "bad settings", 400)
 				return
 			}

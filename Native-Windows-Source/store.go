@@ -15,7 +15,7 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "2.0.0"
+	appVersion = "2.1.0"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"
@@ -100,6 +100,8 @@ type Settings struct {
 	OverlayW     int    `json:"overlay_w"`
 	OverlayH     int    `json:"overlay_h"`
 	OverlayTheme string `json:"overlay_theme"` // colour theme of the floating live box, see ui/themes.js KC_OV_THEMES
+	// v2.1.0 addition: file name of the chosen logo in ui/logos ("" = default). Optional.
+	AppLogo string `json:"app_logo,omitempty"`
 	// v2.0.0 additions. Optional: an old file simply reads zero values.
 	IdleMinutes int  `json:"idle_minutes,omitempty"` // pause length that counts as idle; 0 = default 5 (range 1..60)
 	HotkeyOff   bool `json:"hotkey_off,omitempty"`   // global hotkeys are on unless this is true (default on)
@@ -298,6 +300,9 @@ func (s *Store) normalize() {
 	}
 	if st.OverlayTheme == "" || len(st.OverlayTheme) > 40 {
 		st.OverlayTheme = "ink"
+	}
+	if !validLogo(st.AppLogo) {
+		st.AppLogo = "" // an unknown logo name falls back to the default
 	}
 	if st.OverlayW < 150 || st.OverlayW > 900 {
 		st.OverlayW = 250

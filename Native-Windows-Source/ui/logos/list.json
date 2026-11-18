@@ -1,0 +1,102 @@
+[
+ {
+  "id": "01_Copper_Bronze.png",
+  "label": "Copper Bronze",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "02_Emerald_Mint.png",
+  "label": "Emerald Mint",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "03_Neon_Violet_Magenta.png",
+  "label": "Neon Violet Magenta",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "04_Ocean_Blue_Cyan.png",
+  "label": "Ocean Blue Cyan",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "05_Golden_Sunshine.png",
+  "label": "Golden Sunshine",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "06_Orange_Coral.png",
+  "label": "Orange Coral",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "07_Ruby_Crimson.png",
+  "label": "Ruby Crimson",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "08_Graphite_Silver.png",
+  "label": "Graphite Silver",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "09_Crimson_Pearl_Glass.png",
+  "label": "Crimson Pearl Glass",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "10_Forest_Green_Glass.png",
+  "label": "Forest Green Glass",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "11_Lavender_Purple_Glass.png",
+  "label": "Lavender Purple Glass",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "19_Emerald_Teal_Glass.png",
+  "label": "Emerald Teal Glass",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "20_Amber_Coral_Glass.png",
+  "label": "Amber Coral Glass",
+  "group": "Glassmorphism"
+ },
+ {
+  "id": "12_Orange_Backdrop_Monochrome.png",
+  "label": "Orange Backdrop Monochrome",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "13_Violet_Backdrop_Monochrome.png",
+  "label": "Violet Backdrop Monochrome",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "14_Red_Backdrop_Monochrome.png",
+  "label": "Red Backdrop Monochrome",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "15_Blue_Backdrop_Monochrome.png",
+  "label": "Blue Backdrop Monochrome",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "16_Green_Backdrop_Monochrome.png",
+  "label": "Green Backdrop Monochrome",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "17_Sapphire_Edge_Light.png",
+  "label": "Sapphire Edge Light",
+  "group": "Light backdrops"
+ },
+ {
+  "id": "18_Pearl_Black_Chrome.png",
+  "label": "Pearl Black Chrome",
+  "group": "Light backdrops"
+ }
+]

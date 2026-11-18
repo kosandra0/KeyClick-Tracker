@@ -947,7 +947,8 @@ func main() {
 			pSetForegroundWindow.Call(mainHWND)
 		}
 		_ = view.Bind("kcReady", func() { reveal() })
-		onSettingsChanged = func() { view.Dispatch(syncOverlay); view.Dispatch(registerHotkeys) }
+		onSettingsChanged = func() { view.Dispatch(syncOverlay); view.Dispatch(registerHotkeys); view.Dispatch(applyAppLogo) }
+		view.Dispatch(applyAppLogo) // v2.1.0: the chosen logo for the tray and window icon
 		view.Dispatch(syncOverlay) // show the live overlay at start-up if it was left enabled
 		view.Init("window.__KC_NATIVE = true;")
 		view.Navigate(url)

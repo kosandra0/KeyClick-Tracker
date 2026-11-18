@@ -1,6 +1,13 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.1.0', date: '2026-11-18', title: 'Choose your app logo',
+    intro: 'A new choice of app logo. Your statistics are not changed by this version.',
+    items: [
+      ['new', 'App logo: Appearance now has an App logo section with the 20 logos from the Glassmorphism themes and the alternate light themes. Pick one and it changes the logo in the app and the tray icon and taskbar icon at once. Default restores the original logo.'],
+    ],
+  },
+  {
     version: '2.0.0', date: '2026-11-16', title: 'Tray menu, reminders, summaries, practice and more',
     intro: 'The first major release of KeyClick Tracker. Your existing history is kept: a backup is made before the first start of this version, and the statistics file format is extended without removing anything. Everything below is new in this version unless it is marked as fixed.',
     items: [

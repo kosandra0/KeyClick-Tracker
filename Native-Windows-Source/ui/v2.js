@@ -73,6 +73,59 @@
   }
   hook('settings', { html: h => appendPanels(h, settingsExtra()), mount: bindSettings });
 
+  /* ---------- v2.1.0: app logo. The chosen logo is used in the app, and the native side
+     (tray icon, taskbar and window icon) follows the same setting. ---------- */
+  let logoList = null;
+  KC.logoSrc = function () { const id = (state.settings || {}).app_logo; return id ? '/ui/logos/' + encodeURIComponent(id) : '/ui/logo.png'; };
+  KC.applyLogo = function () {
+    const src = KC.logoSrc();
+    $$('.brand-logo, .about-hero img').forEach(img => { if (img.getAttribute('src') !== src) img.setAttribute('src', src); });
+    const link = document.querySelector('link[rel="icon"]');
+    if (link && link.getAttribute('href') !== src) link.setAttribute('href', src);
+  };
+  async function loadLogoList() {
+    if (logoList) return logoList;
+    try { logoList = await (await fetch('/ui/logos/list.json', { cache: 'no-store' })).json(); } catch (e) { logoList = []; }
+    return logoList;
+  }
+  const logoCard = (id, label, cur) => `<button class="logo-card${cur === id ? ' active' : ''}" data-logo="${esc(id)}" title="${esc(label)}"><img src="${id ? '/ui/logos/' + encodeURIComponent(id) : '/ui/logo.png'}" alt=""><span>${esc(label)}</span></button>`;
+  function logoPanel() {
+    return `<section class="panel section-gap" style="--i:5"><div class="panel-head"><div><div class="panel-title">App logo</div><div class="panel-hint">Choose the logo for the app, the tray icon and the taskbar. Your choice is saved and applies at once.</div></div></div><div id="v2-logos"><div class="muted">Loading logos…</div></div></section>`;
+  }
+  function renderLogos(root) {
+    const box = $('#v2-logos', root); if (!box) return;
+    const cur = S().app_logo || '';
+    const groups = {};
+    (logoList || []).forEach(l => { (groups[l.group] = groups[l.group] || []).push(l); });
+    let html = '<div class="logo-grid">' + logoCard('', 'Default', cur) + '</div>';
+    Object.keys(groups).forEach(g => {
+      html += `<div class="logo-group">${esc(g)}</div><div class="logo-grid">` + groups[g].map(l => logoCard(l.id, l.label, cur)).join('') + '</div>';
+    });
+    box.innerHTML = html;
+    $$('.logo-card', box).forEach(b => b.onclick = () => {
+      const id = b.dataset.logo || '';
+      $$('.logo-card', box).forEach(x => x.classList.toggle('active', x === b));
+      KC.saveSettings({ app_logo: id });
+      KC.applyLogo();
+      toast(id ? 'App logo changed.' : 'Default app logo restored.');
+    });
+  }
+  hook('appearance', {
+    html: h => appendPanels(h, logoPanel()),
+    mount: root => { loadLogoList().then(() => renderLogos(root)); },
+  });
+  if (!document.getElementById('v2-logo-style')) {
+    const st = document.createElement('style');
+    st.id = 'v2-logo-style';
+    st.textContent = '.logo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px}' +
+      '.logo-group{margin:16px 0 8px;font-size:13px;color:var(--muted);letter-spacing:.02em}' +
+      '.logo-card{border:1px solid var(--line);background:var(--panel2);border-radius:16px;padding:10px;cursor:pointer;color:var(--ink);font:inherit;text-align:center;transition:box-shadow .2s,border-color .2s}' +
+      '.logo-card img{width:100%;aspect-ratio:1;border-radius:22%;display:block}' +
+      '.logo-card span{display:block;margin-top:6px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.logo-card.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}';
+    document.head.appendChild(st);
+  }
+
   /* ---------- reports (buttons are used on Settings) ---------- */
   async function showReport(period) {
     try {

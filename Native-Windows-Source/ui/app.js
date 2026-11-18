@@ -39,6 +39,7 @@
     KC.applyFont(state.settings.font);
     KC.applyScale(state.settings.font_scale);
     KC.applyMotion(state.settings.animations);
+    if (KC.applyLogo) KC.applyLogo(); // v2.1.0: the chosen app logo
 
     await KC.refreshStatus();
     $('#side-version').textContent = 'v' + ((state.status && state.status.version) || '2.0');
