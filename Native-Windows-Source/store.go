@@ -15,7 +15,7 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "2.1.0"
+	appVersion = "2.2.0"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"
@@ -102,6 +102,9 @@ type Settings struct {
 	OverlayTheme string `json:"overlay_theme"` // colour theme of the floating live box, see ui/themes.js KC_OV_THEMES
 	// v2.1.0 addition: file name of the chosen logo in ui/logos ("" = default). Optional.
 	AppLogo string `json:"app_logo,omitempty"`
+	// v2.2.0 addition: Lite mode lowers CPU and memory use (no animations or effects, a lighter
+	// browser engine after the next start). Optional; default off.
+	LiteMode bool `json:"lite_mode,omitempty"`
 	// v2.0.0 additions. Optional: an old file simply reads zero values.
 	IdleMinutes int  `json:"idle_minutes,omitempty"` // pause length that counts as idle; 0 = default 5 (range 1..60)
 	HotkeyOff   bool `json:"hotkey_off,omitempty"`   // global hotkeys are on unless this is true (default on)

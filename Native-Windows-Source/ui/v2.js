@@ -90,7 +90,20 @@
   }
   const logoCard = (id, label, cur) => `<button class="logo-card${cur === id ? ' active' : ''}" data-logo="${esc(id)}" title="${esc(label)}"><img src="${id ? '/ui/logos/' + encodeURIComponent(id) : '/ui/logo.png'}" alt=""><span>${esc(label)}</span></button>`;
   function logoPanel() {
-    return `<section class="panel section-gap" style="--i:5"><div class="panel-head"><div><div class="panel-title">App logo</div><div class="panel-hint">Choose the logo for the app, the tray icon and the taskbar. Your choice is saved and applies at once.</div></div></div><div id="v2-logos"><div class="muted">Loading logos…</div></div></section>`;
+    return `<section class="panel section-gap" style="--i:5"><div class="panel-head"><div><div class="panel-title">App logo</div><div class="panel-hint">Choose the logo for the app, the tray icon, the taskbar, Task Manager and the Start menu. The app, the tray and the taskbar change at once. Task Manager and the Start menu change when the app restarts.</div></div></div><div id="v2-logo-note"></div><div id="v2-logos"><div class="muted">Loading logos…</div></div></section>`;
+  }
+  /* Task Manager and the Start menu read the icon of the program file. Changing it needs the helper
+     restart, so tell the person when the file still carries another logo. */
+  async function checkLogoPending(root) {
+    const box = $('#v2-logo-note', root); if (!box) return;
+    let pending = false;
+    try { pending = !!(await api('/api/logo/state')).pending; } catch (e) {}
+    if (!pending) { box.innerHTML = ''; return; }
+    box.innerHTML = '<div class="setting-row"><div><div class="setting-title">Finish applying the logo</div><div class="setting-help">The app, the tray and the taskbar already show your logo. Task Manager and the Start menu read the icon of the program file, which changes when the app restarts. It takes a few seconds and your counts are saved first.</div></div><button class="btn primary" id="v2-logo-restart">Restart now</button></div>';
+    $('#v2-logo-restart', box).onclick = async () => {
+      toast('Restarting to apply the logo…');
+      try { await api('/api/restart', { method: 'POST', body: JSON.stringify({ icon: true }) }); } catch (e) { toast('Could not restart: ' + e.message); }
+    };
   }
   function renderLogos(root) {
     const box = $('#v2-logos', root); if (!box) return;
@@ -108,7 +121,9 @@
       KC.saveSettings({ app_logo: id });
       KC.applyLogo();
       toast(id ? 'App logo changed.' : 'Default app logo restored.');
+      setTimeout(() => checkLogoPending(root), 400);
     });
+    checkLogoPending(root);
   }
   hook('appearance', {
     html: h => appendPanels(h, logoPanel()),
@@ -125,6 +140,50 @@
       '.logo-card.active{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}';
     document.head.appendChild(st);
   }
+
+  /* ---------- v2.2.0: Lite mode, and idling while the window is hidden ---------- */
+  KC.liteAtStart = null; // whether Lite mode was on when the app started (the lighter engine only changes at a start)
+  KC.applyLite = function () {
+    const on = !!(state.settings || {}).lite_mode;
+    if (KC.liteAtStart === null) KC.liteAtStart = on;
+    document.documentElement.classList.toggle('lite', on);
+  };
+  /* The app calls this when the window is hidden to the tray, minimised, or shown again. */
+  window.kcVisible = function (v) {
+    KC.hidden = !v;
+    document.documentElement.classList.toggle('kc-hidden', !v);
+    if (v && KC.refreshBindings) { try { KC.refreshBindings(); } catch (e) {} }
+  };
+  if (!document.getElementById('v2-lite-style')) {
+    const st2 = document.createElement('style');
+    st2.id = 'v2-lite-style';
+    st2.textContent = 'html.lite *,html.lite *::before,html.lite *::after{animation:none !important;transition:none !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;filter:none !important;box-shadow:none !important;text-shadow:none !important;scroll-behavior:auto !important}' +
+      'html.kc-hidden *,html.kc-hidden *::before,html.kc-hidden *::after{animation-play-state:paused !important}' +
+      '.setting-row[hidden]{display:none !important}';
+    document.head.appendChild(st2);
+  }
+  function litePanel() {
+    const s = S();
+    return panel('Lite mode', 'For older or slower computers. It lowers processor and memory use. Counting is not affected.',
+      row('Lite mode', 'Turns off animations and visual effects at once, and uses a lighter browser engine after the app restarts.', sw('v2-lite', !!s.lite_mode)) +
+      `<div class="setting-row" id="v2-lite-restart"${!!s.lite_mode !== KC.liteAtStart ? '' : ' hidden'}><div><div class="setting-title">Restart to finish</div><div class="setting-help">The lighter browser engine starts with the next start of the app. Your counts are saved first.</div></div><button class="btn primary" id="v2-lite-restart-btn">Restart now</button></div>`);
+  }
+  function bindLite(root) {
+    const on = $('#v2-lite', root); if (!on) return;
+    on.onchange = () => {
+      KC.saveSettings({ lite_mode: on.checked });
+      KC.applyLite();
+      const r = $('#v2-lite-restart', root); if (r) r.hidden = (on.checked === KC.liteAtStart);
+      toast(on.checked ? 'Lite mode is on.' : 'Lite mode is off.');
+    };
+    const b = $('#v2-lite-restart-btn', root);
+    if (b) b.onclick = async () => {
+      toast('Restarting…');
+      try { await api('/api/restart', { method: 'POST', body: JSON.stringify({}) }); } catch (e) { toast('Could not restart: ' + e.message); }
+    };
+  }
+  /* Placed after the first panel so it is easy to find. */
+  hook('settings', { html: h => h.replace('</section>', '</section>' + litePanel()), mount: bindLite });
 
   /* ---------- reports (buttons are used on Settings) ---------- */
   async function showReport(period) {

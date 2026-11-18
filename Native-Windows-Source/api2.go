@@ -57,6 +57,24 @@ func api2Handler(w http.ResponseWriter, r *http.Request, q map[string][]string) 
 		writeJSON(w, layoutsJSON(q))
 	case "/api/displays":
 		writeJSON(w, displaysJSON())
+	case "/api/logo/state": // v2.2.0: does the program file still need the chosen logo?
+		writeJSON(w, map[string]any{"pending": exeIconPending()})
+	case "/api/restart": // v2.2.0: restart through the helper; {"icon":true} also writes the chosen logo into the program file
+		if r.Method != http.MethodPost {
+			http.Error(w, "Method not allowed", 405)
+			return true
+		}
+		var in struct {
+			Icon bool `json:"icon"`
+		}
+		_ = json.NewDecoder(io.LimitReader(r.Body, 1<<10)).Decode(&in)
+		writeJSON(w, map[string]any{"ok": true})
+		go func() {
+			time.Sleep(300 * time.Millisecond) // let the answer reach the page first
+			if err := startHelperAndExit(in.Icon); err != nil {
+				logLine("restart failed: " + err.Error())
+			}
+		}()
 	case "/api/dev/reminder": // test copies only (KEYCLICK_DEV=1): fake "a reminder just fired" and read the state
 		if os.Getenv("KEYCLICK_DEV") != "1" {
 			http.NotFound(w, r)

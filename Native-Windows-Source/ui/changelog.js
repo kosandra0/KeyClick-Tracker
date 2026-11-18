@@ -1,6 +1,16 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.2.0', date: '2026-11-18', title: 'Lite mode for older computers, and the logo everywhere',
+    intro: 'A Lite mode that lowers processor and memory use, and the chosen logo now also shows in Task Manager and the Start menu. Your statistics are not changed by this version.',
+    items: [
+      ['new', 'Lite mode (Settings). For older or slower computers. It turns off animations and visual effects at once, and uses a lighter browser engine after the next start of the app: software drawing instead of the graphics card, one page process and no background services. Counting is not affected. A Restart now button finishes the change.'],
+      ['improved', 'Less work while the window is hidden. When the window is closed to the tray or minimised, the app now stops animating and redrawing the page. This lowers processor use in normal mode too.'],
+      ['fixed', 'The logo you choose now changes everywhere. Before, only the window, the tray icon and the taskbar changed. Task Manager and the Start menu (including pinned tiles) read the icon stored in the program file, so the app now writes your logo into its own file. Windows cannot change a running program, so this is done by a short restart: after you pick a logo, Appearance shows a Restart now button. Your counts are saved first.'],
+      ['changed', 'After an update or reinstall the program file has the default icon again. Appearance then shows the Restart now button once so your logo is applied again.'],
+    ],
+  },
+  {
     version: '2.1.0', date: '2026-11-18', title: 'Choose your app logo',
     intro: 'A new choice of app logo. Your statistics are not changed by this version.',
     items: [

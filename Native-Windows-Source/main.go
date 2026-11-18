@@ -650,6 +650,7 @@ func showMainWindow() {
 	}
 	pShowWindow.Call(mainHWND, swRestore)
 	pSetForegroundWindow.Call(mainHWND)
+	setUIVisible(true)
 }
 
 func mainProc(h, msg, wp, lp uintptr) uintptr {
@@ -681,11 +682,13 @@ func mainProc(h, msg, wp, lp uintptr) uintptr {
 		storeMu.RUnlock()
 		if toTray && trayAdded {
 			pShowWindow.Call(h, swHide)
+			setUIVisible(false) // v2.2.0: the page stops animating while hidden
 			return 0
 		}
 		shutdown()
 		return 0
 	case wmSize:
+		setUIVisible(wp != sizeMinimized) // v2.2.0: a minimised window does not need to animate
 		r, _, _ := pCallWindowProcW.Call(oldMainProc, h, msg, wp, lp)
 		if wp != sizeMinimized {
 			applyRoundedRegion(h)
@@ -834,6 +837,10 @@ func msgBox(text, title string) {
 
 func main() {
 	runtime.LockOSThread()
+	if len(os.Args) > 1 && os.Args[1] == "--helper" { // v2.2.0: restart / icon helper (iconpatch.go)
+		runHelper(os.Args[2:])
+		return
+	}
 	for _, a := range os.Args[1:] {
 		switch a {
 		case "--background":
@@ -863,6 +870,8 @@ func main() {
 
 	loadStore()
 	bootStep("statistics file loaded")
+	applyLiteEngine()         // v2.2.0: Lite mode's engine options, before any WebView2 window exists
+	go cleanHelperCopies()    // v2.2.0: removes temporary files left by earlier restarts
 	go appWatcher()    // v2.0.0 (F1): focused-program tracking (apps.go)
 	go goalWatcher()   // v2.0.0 (F7): goals in force per day (features2.go)
 	go backupWatcher() // v2.0.0 (F9): a backup copy every six hours (features2.go)
@@ -940,7 +949,11 @@ func main() {
 		bindWindowControls()
 		var shown atomic.Bool
 		reveal := func() {
-			if hide || !shown.CompareAndSwap(false, true) {
+			if hide { // started in the background (sign-in): the page stays hidden and idle
+				setUIVisible(false)
+				return
+			}
+			if !shown.CompareAndSwap(false, true) {
 				return
 			}
 			pShowWindow.Call(mainHWND, swShow)

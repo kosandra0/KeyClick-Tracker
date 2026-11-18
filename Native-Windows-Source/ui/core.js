@@ -142,7 +142,7 @@
     const dec = +el.dataset.dec || 0;
     return dec ? Number(v).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : KC.fmt(v);
   }
-  const animOK = () => state.settings.animations && state.settings.live_numbers;
+  const animOK = () => state.settings.animations && state.settings.live_numbers && !state.settings.lite_mode;
   KC.hydrate = function (root, intro) {
     $$('[data-odo]', root).forEach(el => {
       let o = odos.get(el);
@@ -214,7 +214,7 @@
   /* ---------- live feed ---------- */
   let paintQueued = false, resyncTimer = 0, es = null, wasDown = false;
   KC.schedulePaint = function () {
-    if (paintQueued) return;
+    if (paintQueued || KC.hidden) return; // v2.2.0: nothing is drawn while the window is hidden
     paintQueued = true;
     requestAnimationFrame(() => { paintQueued = false; KC.refreshBindings(); });
   };

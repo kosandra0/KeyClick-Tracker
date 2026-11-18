@@ -33,3 +33,6 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ov-bottom);color
 .ov[data-preset=compact] .num{font-size:min(58vh,12vw)}
 .ov[data-preset=compact] .m i{margin-top:0;font-size:min(22vh,4.6vw)}
 .ov[data-preset=compact] .sep{height:50%}
+
+/* v2.2.0 Lite mode: no animation or effects in the live box */
+html.lite *,html.lite *::before,html.lite *::after{animation:none !important;transition:none !important;filter:none !important;box-shadow:none !important;backdrop-filter:none !important;text-shadow:none !important}

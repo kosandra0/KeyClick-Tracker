@@ -23,6 +23,7 @@
       preset = ['compact', 'detailed', 'sparkline'].includes(r.settings.overlay_preset) ? r.settings.overlay_preset : 'detailed';
       $('#ov').dataset.preset = preset;
       applyLook(r.settings);
+      document.documentElement.classList.toggle('lite', !!r.settings.lite_mode); // v2.2.0 Lite mode: no effects
       paint();
     } catch (e) {}
   }
