@@ -11,7 +11,7 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 **[Download KeyClick Tracker 2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0)**
 
 - **New:** choose your app logo in Appearance. Pick one of 20 logos and the app, the tray icon and the taskbar icon change at once.
-- Your existing data is kept, and no new setup is needed. Checksums are in  on the release page.
+- Your existing data is kept, and no new setup is needed. Checksums are in `SHA256SUMS.txt` on the release page.
 
 Earlier releases: [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
