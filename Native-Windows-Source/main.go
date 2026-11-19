@@ -360,28 +360,42 @@ func handleKey(vk, scan uint32, down bool, ext bool) {
 	t := time.Now()
 	isMod := mods.apply(vk, ext, down, t)
 	if !down {
+		_, sawDown := pressedAt[vk]
 		delete(pressedAt, vk)
+		// v2.3.0 fix: with Win or Alt held, Windows consumes many shortcut keys itself (Win+2,
+		// Win+T, Alt+Tab ...) and Raw Input then delivers only the key-UP, never the key-down.
+		// Those keys were lost. A key-up with no counted key-down, while Win or Alt is held,
+		// is therefore the press. Ctrl and Shift never lose key-downs, so they are untouched.
+		if !isMod && !sawDown && mods.winOrAltHeld() {
+			queuePress(vk, scan, ext, false)
+		}
 		return
 	}
 	now := t.UnixNano()
 	last, held := pressedAt[vk]
 	if !held || now-last > repeatGapNS {
-		// v2.0.0: the extended-key flag tells right Ctrl/Alt from left. It was never passed
-		// before, so right-hand Ctrl and Alt were counted as the left-hand keys.
-		var flags uint32
-		if ext && (vk == 0x11 || vk == 0x12) {
-			flags = 1
-		}
-		queueEvent("key", keyName(vk, scan, flags), 0)
-		if isMod {
-			if countedModifier(vk) {
-				queueEvent("modkey", "", 0)
-			}
-		} else if mods.isShortcut() {
-			queueEvent("shortcut", "", 0)
-		}
+		queuePress(vk, scan, ext, isMod)
 	}
 	pressedAt[vk] = now
+}
+
+// queuePress queues the events for one counted key press (the key, and the shortcut or
+// modifier-key marker). Input thread only.
+func queuePress(vk, scan uint32, ext, isMod bool) {
+	// v2.0.0: the extended-key flag tells right Ctrl/Alt from left. It was never passed
+	// before, so right-hand Ctrl and Alt were counted as the left-hand keys.
+	var flags uint32
+	if ext && (vk == 0x11 || vk == 0x12) {
+		flags = 1
+	}
+	queueEvent("key", keyName(vk, scan, flags), 0)
+	if isMod {
+		if countedModifier(vk) {
+			queueEvent("modkey", "", 0)
+		}
+	} else if mods.isShortcut() {
+		queueEvent("shortcut", "", 0)
+	}
 }
 
 // handleMouse queues one event per button press and one per wheel step group.

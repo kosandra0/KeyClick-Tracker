@@ -229,7 +229,7 @@
         '<div class="panel speed-big"><div class="unit">Click rate now</div><div class="num"><span data-odo="live.cpm" data-conv="c"></span><small class="ulab" data-unit="c"></small></div><div class="unit sm"><span data-unitname="c"></span> · last few seconds</div><div class="meter"><i id="m-cpm"></i></div></div>' +
         '<div class="panel"><div class="panel-head" style="margin-bottom:6px"><div class="panel-title">Pace in this period</div></div><div class="kv"><div class="k">Overall <span data-unit="w"></span></div><div class="v"><span data-odo="stats.rates.overallWpm" data-dec="1" data-conv="w"></span></div><div class="k">Average <span data-unit="w"></span></div><div class="v"><span data-odo="stats.rates.avgWpm" data-dec="1" data-conv="w"></span></div><div class="k">Overall <span data-unit="c"></span></div><div class="v"><span data-odo="stats.rates.overallCpm" data-dec="1" data-conv="c"></span></div><div class="k">Average <span data-unit="c"></span></div><div class="v"><span data-odo="stats.rates.avgCpm" data-dec="1" data-conv="c"></span></div></div></div></div>' +
         '<section class="panel section-gap" style="--i:4"><div class="panel-head"><div><div class="panel-title">Active vs idle</div><div class="panel-hint">Idle means a pause longer than your threshold in Settings. Idle time is not counted as work.</div></div></div><div id="idle-card"><div class="empty-mini">Loading…</div></div></section>' +
-        '<section class="panel section-gap" style="--i:4"><div class="panel-head"><div><div class="panel-title">By application</div><div class="panel-hint">Which programs received your typing and clicks today. Only the program file name is kept, never window titles or what you typed.</div></div></div><div id="app-card"><div class="empty-mini">Loading…</div></div></section>' +
+        '<section class="panel section-gap" style="--i:4"><div class="panel-head"><div><div class="panel-title">By application</div><div class="panel-hint">Which programs received your typing, clicks and scrolls today. Only the program file name is kept, never window titles or what you typed.</div></div></div><div id="app-card"><div class="empty-mini">Loading…</div></div></section>' +
         '<div class="section-gap">' + chartPanel('Activity over time', 'Each bar is one ' + ({ hour: 'hour', daily: 'day', weekly: 'week', monthly: 'month', quarterly: 'quarter', yearly: 'year' }[state.unit]) + '. It grows as you work.') + '</div>' +
         '<div class="grid split-grid section-gap" style="--i:5"><section class="panel"><div class="panel-head"><div><div class="panel-title">Daily goals</div><div class="panel-hint">Gentle targets you can change in Settings.</div></div><div class="streak-num" style="--c:var(--amber)"><span data-odo="all.streak.current"></span><small>day streak</small></div></div><div id="goals"></div></section>' +
         '<section class="panel"><div class="panel-head"><div><div class="panel-title">Little observations</div><div class="panel-hint">Noticed from your own numbers.</div></div></div><div id="insights"></div></section></div>' +
@@ -252,7 +252,8 @@
         if (!r.tracking) { box.innerHTML = '<div class="empty-mini">Application tracking is off. Turn it on in Settings.</div>'; return; }
         if (!r.apps.length) { box.innerHTML = '<div class="empty-mini">Nothing recorded for any program yet today.</div>'; return; }
         const top = Math.max(1, ...r.apps.map(a => a.keys + a.clicks + a.scroll));
-        box.innerHTML = r.apps.map(a => { const n = a.keys + a.clicks + a.scroll; return '<div class="file-row"><span class="selectable">' + esc(a.name) + '</span><span style="flex:1;margin:0 12px;height:8px;border-radius:999px;background:var(--line);overflow:hidden"><i style="display:block;height:100%;width:' + Math.round(100 * n / top) + '%;background:var(--accent)"></i></span><span class="muted">' + Number(a.keys).toLocaleString() + ' keys · ' + Number(a.clicks).toLocaleString() + ' clicks</span></div>'; }).join('') +
+        const N = v => Number(v || 0).toLocaleString();
+        box.innerHTML = r.apps.map(a => { const n = a.keys + a.clicks + a.scroll; return '<div class="file-row app-row"><span class="selectable app-name">' + esc(a.name) + '</span><span class="app-bar"><i style="width:' + Math.round(100 * n / top) + '%"></i></span><span class="muted app-nums">' + N(a.keys) + ' keys · ' + N(a.clicks) + ' clicks · ' + N(a.scroll) + ' scrolls</span></div>'; }).join('') +
           (r.other_keys ? '<div class="panel-hint" style="margin-top:8px">' + Number(r.other_keys).toLocaleString() + ' keys are not tied to a program (typed in this window, or counted before tracking existed).</div>' : '');
       } catch (e) { box.innerHTML = '<div class="empty-mini">Could not load this card.</div>'; }
     },
@@ -612,25 +613,26 @@
       return '<div class="page-wrap"><section class="panel about-hero" style="--i:0"><img src="' + KC.logoSrc() + '" alt=""><h2>KeyClick Tracker</h2><p>A quiet companion that counts your keys, clicks and scrolls, so you can see the shape of your day. It never records what you type or where your cursor goes.</p><div><span class="badge-pill">Version ' + esc(v) + '</span><span class="badge-pill">Windows 10 / 11</span><span class="badge-pill">100% local</span></div></section>' +
         '<div class="grid two-col section-gap" style="--i:2"><section class="panel"><div class="panel-title" style="margin-bottom:10px">What is recorded</div><p class="muted" style="margin:0;line-height:1.7">Which key (for example “A” or “Space”), which mouse button, scroll direction, and how many times, grouped by hour. Plus a small per-day summary of active minutes for speed figures.</p></section><section class="panel"><div class="panel-title" style="margin-bottom:10px">What is never recorded</div><p class="muted" style="margin:0;line-height:1.7">Typed text, passwords, key sequences, clipboard contents, cursor positions, window titles or screenshots. Nothing leaves your computer.</p></section></div>' +
         (function () {
-          /* Fixed UI face for these cards, so names and handles look the same whatever typeface is chosen. */
-          const ui = 'font-family:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;';
-          const card = (tag, attrs, mark, name, lines) => '<' + tag + ' ' + attrs + ' style="' + ui + 'display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid var(--line);border-radius:16px;background:var(--panel2);color:var(--ink);text-align:left;font:inherit;cursor:' + (tag === 'button' ? 'pointer' : 'default') + ';min-width:0">' +
-            '<span style="flex:0 0 46px;height:46px;border-radius:14px;display:grid;place-items:center;background:' + mark.bg + ';box-shadow:0 8px 18px -10px ' + mark.bg + '">' + mark.img + '</span>' +
-            '<span style="display:flex;flex-direction:column;min-width:0;gap:3px"><span style="font-size:15px;font-weight:650;letter-spacing:.01em">' + name + '</span>' + lines.map(l => '<span style="font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + l + '</span>').join('') + '</span></' + tag + '>';
-          const ig = 'linear-gradient(45deg,#feda75,#fa7e1e,#d62976,#962fbf,#4f5bd5)';
-          const white = 'width:24px;height:24px;display:block;filter:brightness(0) invert(1)';
+          /* v2.3.0: the cards are styled by CSS classes (styles.css). The old inline style attribute
+             contained double quotes (font-family:"Segoe UI"), which cut the attribute short and
+             dropped every style after it: that was the broken Contact layout. */
+          const C = KC.contact, ico = n => '<img class="cimg" src="/ui/brand/' + n + '.svg" alt="" width="22" height="22">';
+          const head = (cls, icon, name, lines) => '<div class="chead"><span class="cico ' + cls + '">' + ico(icon) + '</span><div class="cinfo"><span class="cnm">' + name + '</span>' + lines.map(l => '<span class="cid">' + l + '</span>').join('') + '</div></div>';
           return '<section class="panel section-gap" style="--i:3"><div class="panel-head"><div><div class="panel-title">Contact us</div><div class="panel-hint">Say hello, share feedback, or ask a question.</div></div></div>' +
-            '<div style="' + ui + 'display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px">' +
-            card('button', 'type="button" data-link="https://www.instagram.com/i.have.lost.it.all/"', { bg: ig, img: '<img src="/ui/brand/instagram.svg" alt="" style="' + white + '">' }, 'Instagram', ['@i.have.lost.it.all']) +
-            card('button', 'type="button" data-link="https://t.me/i_am_the_last_passenger"', { bg: '#26a5e4', img: '<img src="/ui/brand/telegram.svg" alt="" style="' + white + '">' }, 'Telegram', ['@i_am_the_last_passenger']) +
-            card('div', '', { bg: '#5865f2', img: '<img src="/ui/brand/discord.svg" alt="" style="' + white + '">' }, 'Discord', ['Username: 3.11.17', 'Display name: Last Wayferer']) +
+            '<div class="contact-grid">' +
+            '<article class="contact-card">' + head('ig', 'instagram', 'Instagram', [esc(C.instagram.handle)]) + '<button type="button" class="cbtn" data-link="' + esc(C.instagram.url) + '">Open Instagram</button></article>' +
+            '<article class="contact-card">' + head('tg', 'telegram', 'Telegram', [esc(C.telegram.handle)]) + '<button type="button" class="cbtn" data-link="' + esc(C.telegram.url) + '">Open Telegram</button></article>' +
+            '<article class="contact-card">' + head('dc', 'discord', 'Discord', ['Username: ' + esc(C.discord.username), 'Display name: ' + esc(C.discord.display)]) +
+            '<button type="button" class="cbtn" data-copy="' + esc(C.discord.username) + '"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg><span class="cbtn-t">Copy username</span></button></article>' +
             '</div></section>';
         })() + '</div>';
     },
     mount(root) {
       root.onclick = e => {
         const b = e.target.closest('[data-link]');
-        if (b) KC.openLink(b.dataset.link);
+        if (b) { KC.openLink(b.dataset.link); return; }
+        const c = e.target.closest('[data-copy]');
+        if (c) KC.copyText(c.dataset.copy, c);
       };
     }
   };

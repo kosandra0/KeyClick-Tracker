@@ -6,16 +6,16 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 
 **It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope\activity.json`, and nothing is sent anywhere.
 
-## Latest release: 2.2.0
+## Latest release: 2.3.0
 
-**[Download KeyClick Tracker 2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0)**
+**[Download KeyClick Tracker 2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0)**
 
-- **New: Lite mode** for older computers. Settings has a Lite mode switch that turns off animations and effects and uses a lighter browser engine after a restart. In tests it cut processor use from about 40% to about 2% with the window open, and used less memory.
-- **Fixed:** the logo you choose now changes everywhere, including Task Manager and the Start menu. After choosing a logo, Appearance shows a Restart now button that finishes the change.
-- **Improved:** the app does less work while its window is hidden in the tray.
+- **Fixed:** keys pressed while the Windows key or Alt is held are now counted. Windows handles many of these shortcuts itself (Win+2, Win+T, Alt+Tab and others) and passes only the key release to the app; the app now counts that release as the press. Ctrl and Shift combinations are unchanged.
+- **New:** By application on the Overview page now shows scrolls as well as keys and clicks.
+- **Fixed and improved:** the Contact us section in About is now three matching cards (Instagram, Telegram, Discord) with small icons, and Discord has a Copy username button.
 - Your existing data is kept. Checksums are in `SHA256SUMS.txt` on the release page.
 
-Earlier releases: [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
+Earlier releases: [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
 ## Download and install
 
@@ -33,7 +33,7 @@ Requirements: Windows 10 or 11, 64-bit. The app uses the Microsoft Edge WebView2
 **Check the download.** In PowerShell:
 
 ```powershell
-Get-FileHash .\KeyClick-Tracker-Setup-v1.2.3.exe -Algorithm SHA256
+Get-FileHash .\KeyClick-Tracker-Setup-v2.3.0.exe -Algorithm SHA256
 ```
 
 Compare the result with the checksum listed on the release page.

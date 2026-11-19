@@ -279,6 +279,35 @@
       });
     });
   };
+  /* v2.3.0 contact details: the one place to edit them. discord.username is what the Copy button copies
+     (the account name); discord.display is only shown. */
+  KC.contact = {
+    instagram: { handle: '@i.have.lost.it.all', url: 'https://www.instagram.com/i.have.lost.it.all/' },
+    telegram: { handle: '@i_am_the_last_passenger', url: 'https://t.me/i_am_the_last_passenger' },
+    discord: { username: '3.11.17', display: 'Last Wayferer' }
+  };
+  /* Copies text to the clipboard and shows "Copied!" on the button, or "Could not copy" when it fails. */
+  KC.copyText = function (text, btn) {
+    const label = btn.querySelector('.cbtn-t'), orig = label ? (label.dataset.o || (label.dataset.o = label.textContent)) : '';
+    const show = ok => {
+      if (label) label.textContent = ok ? 'Copied!' : 'Could not copy';
+      btn.classList.toggle('ok', ok); btn.classList.toggle('bad', !ok);
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => { if (label) label.textContent = orig; btn.classList.remove('ok', 'bad'); }, 1800);
+    };
+    const fallback = () => {
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        show(!!ok);
+      } catch (e) { show(false); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(() => show(true), fallback);
+    else fallback();
+  };
   /* Contact links: open through the desktop host when present, else in a new tab. */
   KC.openLink = function (url) {
     if (typeof window.kcOpen === 'function') window.kcOpen(url);

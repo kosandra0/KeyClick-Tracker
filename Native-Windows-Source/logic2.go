@@ -56,6 +56,10 @@ func countedModifier(vk uint32) bool {
 	return false
 }
 
+// winOrAltHeld reports whether a Windows key or either Alt key is held (v2.3.0). Only those
+// modifiers make Windows consume the key-down of the next key before Raw Input sees it.
+func (m *modState) winOrAltHeld() bool { return m.win || m.altL || m.altR }
+
 // isShortcut reports whether a non-modifier key pressed now is a shortcut: Ctrl, left Alt or
 // Win held. Shift alone is not. On layouts where AltGr sends Ctrl+Alt, right Alt is ignored
 // (known limit, documented in the plan).

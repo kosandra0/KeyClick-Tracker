@@ -1,6 +1,18 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.3.0', date: '2026-11-19', title: 'Windows and Alt shortcuts are counted, scrolls per program, tidier About page',
+    intro: 'Fixes keys that went missing while the Windows key or Alt was held, shows scrolls for each program, and tidies the Contact section. Your existing statistics are kept.',
+    items: [
+      ['fixed', 'Keys pressed while the Windows key or Alt is held are now counted. Windows handles many of these shortcuts itself (Win+2, Win+T, Alt+Tab and others) and then never passes the key press to the app, only its release. The app now counts that release as the press, so Alt+Tab pressed several times with Alt held counts every Tab. Ctrl and Shift combinations are unchanged.'],
+      ['new', 'Scrolls in By application (Overview). Each program now shows keys, clicks and scrolls. Scrolls counted before this version were already stored per program and now show up too.'],
+      ['fixed', 'The Contact us section in About was broken: a stray quote mark in its styling made the icons huge and stretched and the Discord bar run across the whole page.'],
+      ['improved', 'Contact us is now three matching cards (Instagram, Telegram, Discord) with small fixed-size icons. Discord has a Copy username button that shows Copied! when it worked, or Could not copy when it did not.'],
+      ['improved', 'By application rows keep their numbers on one line and wrap neatly on a narrow window.'],
+      ['changed', 'Nothing about what is recorded changes: still only key names, mouse buttons, scroll direction and program file names, never typed text or window titles.'],
+    ],
+  },
+  {
     version: '2.2.0', date: '2026-11-18', title: 'Lite mode for older computers, and the logo everywhere',
     intro: 'A Lite mode that lowers processor and memory use, and the chosen logo now also shows in Task Manager and the Start menu. Your statistics are not changed by this version.',
     items: [
