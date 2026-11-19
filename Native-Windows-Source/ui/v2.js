@@ -300,8 +300,10 @@
     catch (e) { await KC.modal({ title: 'That file could not be read', body: `<p>${esc(e.message)}</p><p>Nothing was changed.</p>` }); return false; }
     const f = p.file || {}, c = p.current || {};
     let body = `<p><b>${esc(name)}</b> contains ${fmt(f.keys)} key presses, ${fmt(f.clicks)} clicks and ${fmt(f.scrolls)} scrolls over ${fmt(f.days)} days${f.from ? ` (${esc(f.from)} to ${esc(f.to)})` : ''}.</p><p>Right now you have ${fmt(c.keys)} key presses and ${fmt(c.clicks)} clicks over ${fmt(c.days)} days.</p>`;
+    /* v2.4.0: hold times, scroll sessions and the interval history travel with the file too */
+    if (f.holds || f.scroll_sessions || f.history) body += `<p>It also contains ${fmt(f.holds)} measured key and button holds (${fmt(Math.round((f.held_ms || 0) / 1000))} s held in total), ${fmt(f.scroll_sessions)} scroll sessions and ${fmt(f.history)} history records. They are imported with everything else.</p>`;
     if (mode === 'replace') body += `<p><b>Replace:</b> your current data is swapped for the file. ${p.daysOnlyInCurrent ? `<b>${fmt(p.daysOnlyInCurrent)} day${p.daysOnlyInCurrent === 1 ? '' : 's'}</b> that are only in your current data will no longer be in the main history (they stay in the safety backup).` : 'No day is lost.'} A safety backup of your current data is saved first.</p>`;
-    else body += `<p><b>Merge:</b> ${fmt(p.hoursAdded)} new hours would be added, ${fmt(p.hoursUpdated)} hours updated and ${fmt(p.daysApplied)} days of speed data applied. Nothing is double-counted. A safety backup is saved first.</p>`;
+    else body += `<p><b>Merge:</b> ${fmt(p.hoursAdded)} new hours would be added, ${fmt(p.hoursUpdated)} hours updated and ${fmt(p.daysApplied)} days of daily data applied${p.historyNew ? ', and new history records added' : ''}. Nothing is double-counted, and hold times and history that only exist on this computer are kept. A safety backup is saved first.</p>`;
     return !!(await KC.modal({ title: mode === 'replace' ? 'Replace all current data?' : 'Import this file?', body, actions: [{ label: 'Cancel', value: false }, { label: mode === 'replace' ? 'Replace data' : 'Import', value: true, primary: true, danger: mode === 'replace' }] }));
   };
 

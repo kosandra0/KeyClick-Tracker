@@ -1,6 +1,32 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.4.0', date: '2026-11-19', title: 'How long keys and buttons are held, scroll sessions, and an Applications page',
+    intro: 'KeyClick Tracker now measures how long each key and mouse button is held, groups scrolling into sessions, and shows what each program received. Your existing statistics are kept. Durations start counting from this version; earlier days show Not recorded.',
+    items: [
+      ['new', 'Hold time for every key and mouse button, measured from press to release. Holding Ctrl, Shift and A gives three separate holds, left and right keys are kept apart, and keyboard auto-repeat does not create extra holds. The program in front when you pressed keeps the hold, even if you switch windows before releasing.'],
+      ['new', 'A Held right now panel on Keyboard, Mouse and Applications shows the keys and buttons currently down with a live timer, and the scroll in progress.'],
+      ['new', 'Scroll sessions: wheel events less than 0.4 seconds apart form one session. The time shown is an estimate from the gaps between wheel events (a wheel has no real hold), and a single wheel click shows no time at all.'],
+      ['new', 'Input duration in Analytics: held time for keys and buttons, the most held keys, hold time for each mouse button, and the scroll session summary, for the range you choose.'],
+      ['new', 'Input history in History: the newest 2,000 key holds, button holds and scroll sessions with search, sorting and paging.'],
+      ['new', 'Applications page: every program that received your input, with its own icon, keys, clicks, scrolls, hold times, share and last input. Open a program to see its keyboard heat map, its mouse buttons and its scrolling. Only the program file name is kept, never window titles or typed text.'],
+      ['new', 'Time held on the Overview: the Key presses and Mouse clicks cards show how long their input was held, and the Scroll events card shows the (estimated) scrolling time.'],
+      ['new', 'Most used keys on the Keyboard page has Held and Average columns beside Presses, and every mouse button on the Mouse page shows how long its clicks were held. The Keyboard page shows only keys and the Mouse page only mouse buttons and scrolling.'],
+      ['new', 'KeyClick Tracker is now listed in Applications like any other program, marked this app.'],
+      ['improved', 'Smooth animations in the new screens: numbers roll like the Overview counters, held keys and buttons appear with a glow (a quick tap shows too), programs slide into place when the order changes, and a program opens and closes smoothly. They follow your Animations, Live numbers and Lite mode settings.'],
+      ['fixed', 'Applications no longer jumps while you read it, and opening a program works with one click however often the page was visited.'],
+      ['improved', 'Live numbers. Held time now counts up while you hold a key or button, everywhere it is shown (Overview, Keyboard, Mouse, Analytics, Applications): the number stays in place and its digits roll up, it is not redrawn or delayed, and a total never steps back or counts a hold twice when the hold ends.'],
+      ['improved', 'Keys and mouse buttons glow. A key or button you are holding lights up on the Keyboard and Mouse pages, and in an opened program on Applications it glows (and pulses when pressed) in the program that has focus. The scrolling summary of a program is now a set of tiles, and the History day panel has headed lists.'],
+      ['fixed', 'The History calendar tooltip no longer grows longer every few seconds.'],
+      ['fixed', 'Numbers no longer vanish and reappear when you click or type. The Keyboard list of most used keys and the Mouse rows are now drawn with rows that stay in place: only their numbers roll, new rows rise in and rows that change order slide.'],
+      ['improved', 'History: the By period table shows key-held, button-held and scroll time for every period, picking a day in the calendar opens a panel with the held time of that day, its most held keys and programs (a running day keeps counting live), and the input history rows slide in as new holds are recorded.'],
+      ['improved', 'Less delay for held time. Totals tick in tenths of a second (a minute and more used to move once a second), the held keys are checked ten times a second and at once on every key press or click, and the digits roll in a fraction of a second.'],
+      ['improved', 'Export and import (JSON, TXT and MD) now carry everything: hourly counts, daily totals, every key and button hold time, scroll sessions, the programs with their keys, buttons and times, and the newest 2,000 individual holds and scroll sessions with exact times. The text and Markdown reports also list the hold times and programs in readable form. Importing merges them without losing anything that exists only on this computer, and importing the same file twice changes nothing.'],
+      ['changed', 'Hold time is added to the day it started and is not split at midnight. A hold open when you pause, sleep your PC or lose a key release for more than 15 minutes is dropped, never counted.'],
+      ['changed', 'Totals add up every hold, so they can be more than the time that passed (several keys can be held at once). They are not time spent working.'],
+    ],
+  },
+  {
     version: '2.3.0', date: '2026-11-19', title: 'Windows and Alt shortcuts are counted, scrolls per program, tidier About page',
     intro: 'Fixes keys that went missing while the Windows key or Alt was held, shows scrolls for each program, and tidies the Contact section. Your existing statistics are kept.',
     items: [

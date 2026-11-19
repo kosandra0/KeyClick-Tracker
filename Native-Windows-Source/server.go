@@ -278,6 +278,8 @@ func exportHandler(w http.ResponseWriter, r *http.Request) {
 		blob, _ := json.Marshal(env)
 		var b strings.Builder
 		b.WriteString(reportText(stats, format == "md"))
+		rs, re, _ := rangeBounds(q)
+		b.WriteString(reportDuration(env.Data, rs, re, format == "md")) // v2.4.0: hold times and programs, readable
 		if format == "md" {
 			b.WriteString("\n---\n\n## Restorable data\n\nThe block below lets " + appName + " restore this data (Data → Import). Please do not edit it.\n\n```json\n" + string(blob) + "\n```\n")
 			w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
@@ -367,6 +369,7 @@ func importData(in *Store, mode string) (added, updated, days int, backup string
 	defer storeMu.Unlock()
 	if mode == "replace" {
 		store.Buckets, store.Days = in.Buckets, in.Days
+		store.Recent = in.Recent // v2.4.0: the interval history comes with the file
 		return len(in.Buckets), 0, len(in.Days), backup, nil
 	}
 	for k, b := range in.Buckets {
@@ -385,10 +388,16 @@ func importData(in *Store, mode string) (added, updated, days int, backup string
 		}
 	}
 	for k, d := range in.Days {
-		if ex := store.Days[k]; ex == nil || dayTotal(d) > dayTotal(ex) {
-			store.Days[k] = d
+		// v2.4.0: the basic counters follow the old rule (bigger day wins); hold times, scroll
+		// sessions and per-program detail are merged, so neither side loses anything.
+		if m, changed := mergeDay(store.Days[k], d); changed {
+			store.Days[k] = m
 			days++
 		}
+	}
+	if merged, changed := mergeRecent(store.Recent, in.Recent); changed {
+		store.Recent = merged
+		updated++
 	}
 	return
 }

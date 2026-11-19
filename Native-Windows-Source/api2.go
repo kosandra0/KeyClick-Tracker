@@ -53,6 +53,20 @@ func api2Handler(w http.ResponseWriter, r *http.Request, q map[string][]string) 
 		writeJSON(w, timelineJSON(first(q, "date", dayKey(time.Now()))))
 	case "/api/strain":
 		writeJSON(w, strainJSON(time.Now()))
+	case "/api/held": // v2.4.0
+		writeJSON(w, heldJSON())
+	case "/api/duration":
+		writeJSON(w, durationJSON(q))
+	case "/api/recent":
+		writeJSON(w, recentJSON(q))
+	case "/api/durseries": // v2.4.0: hold time per History period
+		writeJSON(w, durSeriesJSON(q))
+	case "/api/durday":
+		writeJSON(w, durDayJSON(first(q, "date", dayKey(time.Now()))))
+	case "/api/apps2":
+		writeJSON(w, apps2JSON(q))
+	case "/api/appicon":
+		appIconHandler(w, q)
 	case "/api/layouts":
 		writeJSON(w, layoutsJSON(q))
 	case "/api/displays":
@@ -487,7 +501,21 @@ func importPreview(in *Store, mode string) map[string]any {
 		ck += d.Keys
 		cc += d.Clicks
 	}
-	out := map[string]any{"mode": mode, "file": map[string]any{"days": len(in.Days), "hours": len(in.Buckets), "keys": fk, "clicks": fc, "scrolls": fs, "from": from, "to": to},
+	var fhold, fheld, fsess uint64
+	for _, d := range in.Days {
+		for _, h := range d.KeyHold {
+			fhold += h.N
+			fheld += h.Ms
+		}
+		for _, h := range d.MsHold {
+			fhold += h.N
+			fheld += h.Ms
+		}
+		if d.Scr != nil {
+			fsess += d.Scr.Sessions
+		}
+	}
+	out := map[string]any{"mode": mode, "file": map[string]any{"days": len(in.Days), "hours": len(in.Buckets), "keys": fk, "clicks": fc, "scrolls": fs, "from": from, "to": to, "holds": fhold, "held_ms": fheld, "scroll_sessions": fsess, "history": len(in.Recent)},
 		"current": map[string]any{"days": len(store.Days), "hours": len(store.Buckets), "keys": ck, "clicks": cc}}
 	if mode == "replace" {
 		lost := 0
@@ -511,11 +539,12 @@ func importPreview(in *Store, mode string) map[string]any {
 		}
 	}
 	for k, d := range in.Days {
-		if ex := store.Days[k]; ex == nil || dayTotal(d) > dayTotal(ex) {
+		if dayWouldChange(store.Days[k], d) {
 			days++
 		}
 	}
-	out["hoursAdded"], out["hoursUpdated"], out["daysApplied"] = added, updated, days
+	_, recChanged := mergeRecent(store.Recent, in.Recent)
+	out["hoursAdded"], out["hoursUpdated"], out["daysApplied"], out["historyNew"] = added, updated, days, recChanged
 	return out
 }
 

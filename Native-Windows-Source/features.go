@@ -105,6 +105,7 @@ func onHotkey(id uintptr) {
 // onPowerBroadcast resets the idle anchor when the PC wakes, so sleep is not counted as idle.
 func onPowerBroadcast(wp uintptr) {
 	if wp == pbtResumeAuto || wp == pbtResumeSuspend {
+		clearHeld() // v2.4.0: a hold open across sleep is dropped, not counted as hours
 		resetIdleAnchor()
 	}
 }

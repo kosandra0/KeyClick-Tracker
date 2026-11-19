@@ -6,16 +6,17 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 
 **It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope\activity.json`, and nothing is sent anywhere.
 
-## Latest release: 2.3.0
+## Latest release: 2.4.0
 
-**[Download KeyClick Tracker 2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0)**
+**[Download KeyClick Tracker 2.4.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.4.0)**
 
-- **Fixed:** keys pressed while the Windows key or Alt is held are now counted. Windows handles many of these shortcuts itself (Win+2, Win+T, Alt+Tab and others) and passes only the key release to the app; the app now counts that release as the press. Ctrl and Shift combinations are unchanged.
-- **New:** By application on the Overview page now shows scrolls as well as keys and clicks.
-- **Fixed and improved:** the Contact us section in About is now three matching cards (Instagram, Telegram, Discord) with small icons, and Discord has a Copy username button.
-- Your existing data is kept. Checksums are in `SHA256SUMS.txt` on the release page.
+- **New: how long keys and mouse buttons are held.** Every key and button is measured from press to release (left and right keys kept apart, auto-repeat ignored). A live **Held right now** panel and live totals count up while you hold. Scrolling is grouped into sessions with an *estimated* time.
+- **New: Applications page.** Which programs received your keys, clicks and scrolls, with their own icons (KeyClick Tracker lists itself too), hold times, a keyboard heat map, mouse buttons and scrolling for each program, and keys and buttons that glow when held.
+- **Improved:** Overview cards show held time, Keyboard and Mouse show held time per key and button, Analytics has an Input duration section, History has held time per period, a day panel and an input history. Numbers roll live and never disappear when you type or click.
+- **Improved:** export and import (JSON, TXT, MD) carry all hold times, scroll sessions, programs and the newest 2,000 individual holds.
+- Your existing data is kept. Hold times are recorded from 2.4.0 on. Checksums are in `SHA256SUMS.txt` and in the release notes.
 
-Earlier releases: [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
+Earlier releases: [2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0) (Windows and Alt shortcuts counted), [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
 ## Download and install
 
@@ -33,7 +34,7 @@ Requirements: Windows 10 or 11, 64-bit. The app uses the Microsoft Edge WebView2
 **Check the download.** In PowerShell:
 
 ```powershell
-Get-FileHash .\KeyClick-Tracker-Setup-v2.3.0.exe -Algorithm SHA256
+Get-FileHash .\KeyClick-Tracker-Setup-v2.4.0.exe -Algorithm SHA256
 ```
 
 Compare the result with the checksum listed on the release page.
@@ -46,7 +47,8 @@ Compare the result with the checksum listed on the release page.
    - **Keyboard and Mouse:** where your keys and clicks land, with heat maps.
    - **Speed:** typing and clicking speed, in WPM, WPS, WPH, CPM, CPS and CPH, live and per period.
    - **Analytics:** charts and insights built from your counts (see below).
-   - **History:** day-by-day totals and the period you choose.
+   - **History:** day-by-day totals, a day panel with what was held on the day you pick, held time per period, and the newest 2,000 individual holds and scroll sessions.
+   - **Applications:** which programs received your keys, clicks and scrolls, with their own keyboard, mouse buttons and scrolling.
    - **Settings:** appearance, the live box, the tray behaviour, goals and data.
 3. **Close the window.** By default it goes to the system tray and keeps counting. Right-click the tray icon to open the app, pause or resume counting, or exit. To make closing quit the app instead, turn off **Keep running in the tray when closed** in Settings.
 4. **Keep the live box.** Turn on the floating live box in Settings. It stays on top of other windows and shows your current speed and totals. Drag it to move it and drag its bottom-right corner to resize it. Its ✕ turns the setting off. Choose one of ten themes in Appearance.
@@ -55,6 +57,10 @@ Compare the result with the checksum listed on the release page.
 ## Features
 
 - **Live counting:** key presses, mouse clicks and scrolls, with sliding digits.
+- **Hold times:** how long every key and mouse button is held, measured from press to release, shown live and per key, button, program, day and period. Totals add up every hold, so they can be longer than the time that passed.
+- **Scroll sessions:** wheel events less than 0.4 seconds apart form a session; its time is an estimate from the gaps between wheel events and is labelled that way.
+- **Applications:** the programs that received your input, with icons, counts, hold times and a per-program keyboard heat map and mouse buttons.
+- **Keys and buttons that glow** while held or pressed.
 - **Speed:** typing speed (WPS, WPM, WPH) and clicking speed (CPS, CPM, CPH), live and per period.
 - **Overview, Keyboard, Mouse, Speed and History pages:** heat maps, goals, streaks and milestones.
 - **Analytics:** activity bars from hourly to yearly, a trend line with a moving average, an hourly rhythm and 24-hour clock, a weekly rhythm, an hour-by-weekday heat map, a year-of-days calendar, an activity mix, and a breakdown of how you type.
@@ -71,7 +77,7 @@ Compare the result with the checksum listed on the release page.
 
 | What | Where | Notes |
 |---|---|---|
-| Counts and settings | `%LOCALAPPDATA%\KeyScope\activity.json` | The only data file. It holds counts per day and per hour, and your settings. |
+| Counts and settings | `%LOCALAPPDATA%\KeyScope\activity.json` | The only data file. It holds counts per day and per hour, hold times, scroll sessions, per-program counts, the newest 2,000 hold records, and your settings. |
 | Automatic backups | `%LOCALAPPDATA%\KeyScope\Backups` | Made before each update. Never overwritten. |
 | Browser-engine data | `%LOCALAPPDATA%\KeyScope\WebViewProfile` | Preferences and the typing-test best. Caches are rebuilt automatically. |
 
@@ -79,7 +85,7 @@ The data folder keeps its earlier name so that existing data stays readable. Upd
 
 ## Privacy
 
-- Counts only. No key names, no typed text, no cursor positions and no screenshots are stored.
+- Counts and times only. The app stores how often and how long each key (by name, such as A or Space), mouse button and program (by file name) was used. It never stores typed text, the order of your keys, cursor positions, window titles, clipboard contents or screenshots.
 - Nothing is sent over the internet. The app serves its own page on `127.0.0.1` for the window only.
 
 ## Start with Windows
@@ -105,6 +111,11 @@ The build writes `installers\Setup\KeyClick-Tracker-Setup-vX.Y.Z.exe` and `insta
 
 | Version | Date | Highlights |
 |---|---|---|
+| 2.4.0 | 2026-11-19 | Hold times for keys and buttons, scroll sessions, Applications page, live numbers, History additions, complete export and import. |
+| 2.3.0 | 2026-11-19 | Windows and Alt shortcut keys counted, scrolls per program, tidier About page. |
+| 2.2.0 | 2026-11-18 | Lite mode for older computers, your logo in Task Manager and the Start menu. |
+| 2.1.0 | 2026-11-18 | Choose your app logo. |
+| 2.0.0 | 2026-11-17 | Tray menu, reminders, summaries, practice, per-program counts, backup restore. |
 | 1.2.3 | 2026-11-15 | The floating live box stays on screen after the window is closed to the tray. |
 | 1.2.2 | 2026-11-15 | Counts administrator windows, starts at sign-in, setup program. |
 | 1.2.1 | 2026-11-15 | Counting in every app (Raw Input) and a steady Little observations list. |

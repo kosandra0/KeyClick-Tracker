@@ -322,29 +322,54 @@ type rawMouse struct {
 type hookEvent struct {
 	kind, id string
 	units    uint64
+	// v2.4.0: when the input happened (monotonic), the foreground program then, and a sub-kind.
+	app string
+	t   time.Time
+	sub string
 }
 
 // queueEvent never blocks: the input handler must return quickly, and recorder() does the work.
 func queueEvent(kind, id string, units uint64) {
 	select {
-	case hookEvents <- hookEvent{kind, id, units}:
+	case hookEvents <- hookEvent{kind: kind, id: id, units: units, app: appNow(), t: time.Now()}:
 	default: // queue full (should never happen): drop rather than stall
 	}
 }
 
-// recorder drains the input queue and records each event.
+// recorder drains the input queue and records each event. A 250 ms tick also closes idle
+// scroll sessions and drops stuck holds (v2.4.0).
 func recorder() {
-	for ev := range hookEvents {
-		if isPaused() || quietNow() {
-			continue
+	tick := time.NewTicker(250 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		select {
+		case ev := <-hookEvents:
+			processEvent(ev)
+		case <-tick.C:
+			now := time.Now()
+			sweepHolds(now)
+			closeStaleScroll(now)
 		}
-		if ev.kind == "shortcut" || ev.kind == "modkey" { // F4: counted on the day, not as extra keys
-			recordCombo(ev.kind)
-			continue
-		}
-		record(ev.kind, ev.id, ev.units)
-		lastEvent.Store(time.Now().UnixNano())
 	}
+}
+
+func processEvent(ev hookEvent) {
+	if isPaused() || quietNow() {
+		return
+	}
+	if ev.kind == "shortcut" || ev.kind == "modkey" { // F4: counted on the day, not as extra keys
+		recordCombo(ev.kind)
+		return
+	}
+	if ev.kind == "hold" { // v2.4.0: a finished key or button hold
+		recordHold(ev)
+		return
+	}
+	record(ev.kind, ev.id, ev.units)
+	if ev.kind == "scroll" {
+		scrollEvent(ev)
+	}
+	lastEvent.Store(time.Now().UnixNano())
 }
 
 // repeatGapNS: a key that is still held sends auto-repeat key-downs well inside this
@@ -362,6 +387,9 @@ func handleKey(vk, scan uint32, down bool, ext bool) {
 	if !down {
 		_, sawDown := pressedAt[vk]
 		delete(pressedAt, vk)
+		if !isMod || countedModifier(vk) || vk == 0x10 || vk == 0xA0 || vk == 0xA1 {
+			holdUp("k", keyNameFor(vk, scan, ext)) // v2.4.0: measured hold ends
+		}
 		// v2.3.0 fix: with Win or Alt held, Windows consumes many shortcut keys itself (Win+2,
 		// Win+T, Alt+Tab ...) and Raw Input then delivers only the key-UP, never the key-down.
 		// Those keys were lost. A key-up with no counted key-down, while Win or Alt is held,
@@ -375,12 +403,21 @@ func handleKey(vk, scan uint32, down bool, ext bool) {
 	last, held := pressedAt[vk]
 	if !held || now-last > repeatGapNS {
 		queuePress(vk, scan, ext, isMod)
+		holdDown("k", keyNameFor(vk, scan, ext)) // v2.4.0: measured hold starts (auto-repeat does not restart it)
 	}
 	pressedAt[vk] = now
 }
 
 // queuePress queues the events for one counted key press (the key, and the shortcut or
 // modifier-key marker). Input thread only.
+func keyNameFor(vk, scan uint32, ext bool) string {
+	var flags uint32
+	if ext && (vk == 0x11 || vk == 0x12) {
+		flags = 1
+	}
+	return keyName(vk, scan, flags)
+}
+
 func queuePress(vk, scan uint32, ext, isMod bool) {
 	// v2.0.0: the extended-key flag tells right Ctrl/Alt from left. It was never passed
 	// before, so right-hand Ctrl and Alt were counted as the left-hand keys.
@@ -401,6 +438,18 @@ func queuePress(vk, scan uint32, ext, isMod bool) {
 // handleMouse queues one event per button press and one per wheel step group.
 func handleMouse(m *rawMouse) {
 	f := m.ButtonFlags
+	// v2.4.0: button holds. Down starts a hold, up ends it (drags keep one hold).
+	for _, b := range [...]struct {
+		down, up uint16
+		id       string
+	}{{rmbLeftDown, 0x0002, "left"}, {rmbRightDown, 0x0008, "right"}, {rmbMiddleDown, 0x0020, "middle"}, {rmbX1Down, 0x0080, "x1"}, {rmbX2Down, 0x0200, "x2"}} {
+		if f&b.down != 0 {
+			holdDown("m", b.id)
+		}
+		if f&b.up != 0 {
+			holdUp("m", b.id)
+		}
+	}
 	if f&rmbLeftDown != 0 {
 		queueEvent("mouse", "left", 0)
 	}

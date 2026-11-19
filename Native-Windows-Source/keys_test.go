@@ -20,6 +20,9 @@ func feedKeys(t *testing.T, steps []keyStep) []string {
 	var out []string
 	for len(hookEvents) > 0 {
 		e := <-hookEvents
+		if e.kind == "hold" { // v2.4.0 hold intervals are tested in holds_test.go
+			continue
+		}
 		out = append(out, e.kind+":"+e.id)
 	}
 	return out

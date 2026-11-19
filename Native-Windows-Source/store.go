@@ -15,7 +15,7 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "2.3.0"
+	appVersion = "2.4.0"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"
@@ -58,6 +58,10 @@ type DayRoll struct {
 	Peak10 uint64 `json:"peak10,omitempty"`
 	// v2.0.0 (F14): key presses per keyboard layout name.
 	Layouts map[string]uint64 `json:"layouts,omitempty"`
+	// v2.4.0: measured key and mouse-button holds (by key / button) and scroll sessions.
+	KeyHold map[string]*HoldStat `json:"kh,omitempty"`
+	MsHold  map[string]*HoldStat `json:"mh,omitempty"`
+	Scr     *ScrollAgg           `json:"ss,omitempty"`
 }
 
 // PracticeScore is the result of one typing practice lesson (F8). Scores only: the typed text
@@ -77,6 +81,15 @@ type AppCount struct {
 	Clicks uint64 `json:"c,omitempty"`
 	Scroll uint64 `json:"s,omitempty"`
 	Secs   uint64 `json:"t,omitempty"` // seconds in the foreground while input was recent
+	// v2.4.0: per-key and per-button counts and measured holds, scroll sessions, last input time.
+	KeyIDs  map[string]uint64    `json:"ki,omitempty"`
+	MsIDs   map[string]uint64    `json:"mi,omitempty"`
+	KeyHold map[string]*HoldStat `json:"kh,omitempty"`
+	MsHold  map[string]*HoldStat `json:"mh,omitempty"`
+	Sess    uint64               `json:"ss,omitempty"`
+	SessMs  uint64               `json:"sm,omitempty"`
+	ScDir   map[string]uint64    `json:"sd,omitempty"`
+	Last    int64                `json:"lt,omitempty"` // unix seconds of the last input
 }
 
 type Settings struct {
@@ -153,6 +166,8 @@ type Store struct {
 	// v2.0.0: goals in force per day with the met flags (F7), and practice scores (F8).
 	GoalLog  map[string]*GoalDay `json:"goal_log,omitempty"`
 	Practice []PracticeScore     `json:"practice,omitempty"`
+	// v2.4.0: the newest interval records (key holds, button holds, scroll sessions) for History.
+	Recent []Interval `json:"recent,omitempty"`
 }
 
 type minuteAcc struct {
@@ -441,7 +456,7 @@ func record(kind, id string, units uint64) {
 		}
 		pend.ScIDs[id]++
 	}
-	addAppInputLocked(now, kind)    // v2.0.0 (F1): credit the focused program (no-op when tracking is off)
+	addAppInputLocked(now, kind, id) // v2.0.0 (F1): credit the focused program (no-op when tracking is off)
 	addLayoutInputLocked(now, kind) // v2.0.0 (F14): credit the keyboard layout in use
 	if cur.keys+cur.clicks+cur.scroll == 0 {
 		sessActive++

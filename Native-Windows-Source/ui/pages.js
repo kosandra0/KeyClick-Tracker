@@ -35,11 +35,11 @@
   KC.icon = svg;
 
   const NAV = [
-    ['WORKSPACE'], ['overview', 'Overview', 'grid'], ['keyboard', 'Keyboard', 'keyboard'], ['mouse', 'Mouse', 'mouse'], ['speed', 'Speed', 'speed'], ['history', 'History', 'calendar'], ['analytics', 'Analytics', 'chart'], ['practice', 'Practice', 'target'],
+    ['WORKSPACE'], ['overview', 'Overview', 'grid'], ['keyboard', 'Keyboard', 'keyboard'], ['mouse', 'Mouse', 'mouse'], ['speed', 'Speed', 'speed'], ['history', 'History', 'calendar'], ['analytics', 'Analytics', 'chart'], ['apps', 'Applications', 'folder'], ['practice', 'Practice', 'target'],
     ['YOUR DATA'], ['data', 'Data & Backup', 'data'],
     ['PREFERENCES'], ['appearance', 'Appearance', 'palette'], ['settings', 'Settings', 'settings'], ['updates', 'Update Log', 'log'], ['about', 'About', 'info']
   ];
-  const TITLES = { overview: 'Overview', keyboard: 'Keyboard', mouse: 'Mouse', speed: 'Speed', history: 'History', analytics: 'Analytics', practice: 'Practice', data: 'Data & Backup', appearance: 'Appearance', settings: 'Settings', updates: 'Update Log', about: 'About' };
+  const TITLES = { overview: 'Overview', keyboard: 'Keyboard', mouse: 'Mouse', speed: 'Speed', history: 'History', analytics: 'Analytics', apps: 'Applications', practice: 'Practice', data: 'Data & Backup', appearance: 'Appearance', settings: 'Settings', updates: 'Update Log', about: 'About' };
   KC.buildNav = function () {
     $('#nav').innerHTML = '<span class="nav-ind" id="nav-ind"></span>' + NAV.map(n => n.length === 1
       ? '<div class="nav-caption">' + n[0] + '</div>'
@@ -639,7 +639,7 @@
 
   /* ---------- router & events ---------- */
   KC.pages = pages;
-  KC.pg = { S, A, n0, setHTML, header, rangeControls, chartPanel, drawChart, heatHTML, updateHeat, recordsHTML, seriesPoints, svg };
+  KC.pg = { S, A, n0, setHTML, header, rangeControls, chartPanel, drawChart, heatHTML, updateHeat, recordsHTML, seriesPoints, svg, KEYROWS, keyLabel, LAYOUT };
   function moveNavIndicator() {
     const a = $('.nav-item.active'), ind = $('#nav-ind');
     if (!a || !ind) return;

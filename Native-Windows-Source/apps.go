@@ -28,14 +28,26 @@ var (
 var currentApp string
 
 func setCurrentApp(name string) {
+	currentAppAtomic.Store(name) // v2.4.0: lock-free copy for the input thread
 	storeMu.Lock()
 	currentApp = name
 	storeMu.Unlock()
 }
 
+// selfAppName is this program's own file name (lower case), so KeyClick Tracker is listed in
+// the application list like any other program (v2.4.0: the owner asked for it). Only the name.
+func selfAppName() string {
+	p, err := os.Executable()
+	if err != nil || p == "" {
+		return "keyclick-tracker.exe"
+	}
+	rememberAppPath(appNameFromPath(p), p) // in memory, for the program's icon
+	return appNameFromPath(p)
+}
+
 // processNameForWindow returns the file name of the program that owns window h.
-// "" means the window belongs to this app (not counted). "(protected)" means the program
-// cannot be opened, for example an elevated system process.
+// A window of this app is reported under this app's own file name. "" means no window.
+// "(protected)" means the program cannot be opened, for example an elevated system process.
 func processNameForWindow(h uintptr) string {
 	if h == 0 {
 		return ""
@@ -46,7 +58,7 @@ func processNameForWindow(h uintptr) string {
 		return ""
 	}
 	if int(pid) == os.Getpid() {
-		return ""
+		return selfAppName()
 	}
 	hp, _, _ := pOpenProc.Call(processQueryLimit, 0, uintptr(pid))
 	if hp == 0 {
@@ -59,7 +71,10 @@ func processNameForWindow(h uintptr) string {
 	if r == 0 {
 		return appNameFromPath("")
 	}
-	return appNameFromPath(utf16ToString(buf[:size]))
+	full := utf16ToString(buf[:size])
+	name := appNameFromPath(full)
+	rememberAppPath(name, full) // kept in memory only, for the program's icon
+	return name
 }
 
 func utf16ToString(u []uint16) string { return syscall.UTF16ToString(u) }
@@ -122,16 +137,25 @@ func appEntryLocked(now time.Time, name string) *AppCount {
 
 // addAppInputLocked credits one input event to the focused program. kind is key, mouse or scroll.
 // storeMu must be held (record() calls this).
-func addAppInputLocked(now time.Time, kind string) {
+func addAppInputLocked(now time.Time, kind, id string) {
 	if currentApp == "" || store.Settings == nil || store.Settings.AppTrackingOff {
 		return
 	}
 	ac := appEntryLocked(now, currentApp)
+	ac.Last = now.Unix()
 	switch kind {
 	case "key":
 		ac.Keys++
+		if ac.KeyIDs == nil {
+			ac.KeyIDs = map[string]uint64{}
+		}
+		ac.KeyIDs[id]++
 	case "mouse":
 		ac.Clicks++
+		if ac.MsIDs == nil {
+			ac.MsIDs = map[string]uint64{}
+		}
+		ac.MsIDs[id]++
 	case "scroll":
 		ac.Scroll++
 	}
