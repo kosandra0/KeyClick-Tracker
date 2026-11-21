@@ -905,6 +905,15 @@ func main() {
 		return
 	}
 	for _, a := range os.Args[1:] {
+		if a == "--install-webview2" { // v2.5.0: used by the setup program (webview2rt.go)
+			quiet := false
+			for _, b := range os.Args[1:] {
+				quiet = quiet || b == "--quiet"
+			}
+			os.Exit(runInstallWebView2(quiet))
+		}
+	}
+	for _, a := range os.Args[1:] {
 		switch a {
 		case "--background":
 			startHidden = true
@@ -987,24 +996,39 @@ func main() {
 	}()
 	go breakWatcher()
 
-	view = webview2.NewWithOptions(webview2.WebViewOptions{
-		Debug:         os.Getenv("KEYCLICK_DEV") == "1",
-		AutoFocus:     true,
-		DataPath:      filepath.Join(dataDir, "WebViewProfile"),
-		WindowOptions: webview2.WindowOptions{Title: appName, Width: 1280, Height: 820, IconId: iconResourceID, Center: true},
-	})
-	if view == nil {
-		logLine("WebView2 runtime unavailable; opening the default browser instead")
-		pShellExecuteW.Call(0, uintptr(unsafe.Pointer(utf16p("open"))), uintptr(unsafe.Pointer(utf16p(url))), 0, 0, swNormal)
-		var m winMsg
-		for {
-			r, _, _ := pGetMessageW.Call(uintptr(unsafe.Pointer(&m)), 0, 0, 0)
-			if int32(r) <= 0 {
-				break
-			}
-			pTranslateMessage.Call(uintptr(unsafe.Pointer(&m)))
-			pDispatchMessageW.Call(uintptr(unsafe.Pointer(&m)))
+	newMainView := func() webview2.WebView {
+		return webview2.NewWithOptions(webview2.WebViewOptions{
+			Debug:         os.Getenv("KEYCLICK_DEV") == "1",
+			AutoFocus:     true,
+			DataPath:      filepath.Join(dataDir, "WebViewProfile"),
+			WindowOptions: webview2.WindowOptions{Title: appName, Width: 1280, Height: 820, IconId: iconResourceID, Center: true},
+		})
+	}
+	// v2.5.0: this is a desktop app, so it never falls back to a web browser. If the Microsoft
+	// WebView2 Runtime is missing it is installed (with the user's consent), otherwise the app
+	// explains the problem and exits.
+	if webView2Version() == "" {
+		if err := ensureWebView2(false, logLine); err != nil {
+			logLine("WebView2 Runtime unavailable: " + err.Error())
+			msgBox(appName+" cannot open its window because the Microsoft Edge WebView2 Runtime is missing.\n\n"+err.Error()+
+				"\n\nInstall it from https://go.microsoft.com/fwlink/p/?LinkId=2124703 (a free download from Microsoft) and start "+appName+" again. Your data is safe.",
+				appName+" needs the WebView2 Runtime")
+			shutdown()
+			return
 		}
+	}
+	view = newMainView()
+	if view == nil { // the runtime is present but the window could not start: one more try
+		logLine("WebView2 window could not be created; trying once more")
+		time.Sleep(1500 * time.Millisecond)
+		view = newMainView()
+	}
+	if view == nil {
+		logLine("WebView2 window could not be created after a retry")
+		msgBox(appName+" could not open its window. The Microsoft Edge WebView2 Runtime is installed but did not start.\n\nTry restarting Windows, or reinstall the runtime from https://go.microsoft.com/fwlink/p/?LinkId=2124703 . Your data is safe. Details are in the log in %LOCALAPPDATA%\\KeyScope.",
+			appName+" startup error")
+		shutdown()
+		return
 	} else {
 		mainHWND = uintptr(view.Window())
 		frameless(mainHWND)

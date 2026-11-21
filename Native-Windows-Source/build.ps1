@@ -18,15 +18,51 @@ $env:GOOS = 'windows'; $env:GOARCH = 'amd64'; $env:CGO_ENABLED = '0'
 if (Test-Path 'logo-source.png') { & $goExe run ./tools/mkicon -in logo-source.png -crop 0.075 -round 0.23 -out app.ico -png ui/logo.png }
 elseif (-not (Test-Path 'app.ico')) { & $goExe run ./tools/mkicon -out app.ico -png ui/logo.png }
 
-# Windows resources (icon + DPI manifest) -> .syso picked up automatically by go build.
-# Uses windres from MinGW (installed locally); no third-party download is needed.
-$windres = (Get-Command windres -ErrorAction Stop).Source
-& $windres -O coff -F pe-x86-64 -o rsrc_windows_amd64.syso app.rc
-if ($LASTEXITCODE -ne 0) { throw 'windres failed' }
-
 # The version comes from store.go so the app, the setup program and the update log agree.
 $ver = [regex]::Match((Get-Content 'store.go' -Raw), 'appVersion\s*=\s*"([^"]+)"').Groups[1].Value
 if (-not $ver) { throw 'appVersion not found in store.go' }
+
+# Windows resources (icon + DPI manifest + file version information) -> .syso picked up
+# automatically by go build. Uses windres from MinGW (installed locally); no download is needed.
+# The version information (what Explorer shows under Properties > Details) is generated from
+# store.go and appended to a temporary copy of the .rc file.
+$windres = (Get-Command windres -ErrorAction Stop).Source
+function Build-Resource([string]$rcFile, [string]$sysoFile, [string]$description, [string]$original) {
+  $dir = Split-Path $rcFile -Parent
+  $v4 = (($ver -split '\.') + @('0','0','0','0'))[0..3] -join ','
+  $block = @"
+
+1 VERSIONINFO
+FILEVERSION $v4
+PRODUCTVERSION $v4
+FILEOS 0x4
+FILETYPE 0x1
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "FileDescription", "$description"
+      VALUE "FileVersion", "$ver"
+      VALUE "InternalName", "KeyClick-Tracker"
+      VALUE "OriginalFilename", "$original"
+      VALUE "ProductName", "KeyClick Tracker"
+      VALUE "ProductVersion", "$ver"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END
+"@
+  $tmp = Join-Path $dir 'zz-build-temp.rc'
+  Set-Content -Path $tmp -Value ((Get-Content $rcFile -Raw) + $block) -Encoding ascii
+  Push-Location $dir
+  try { & $windres -O coff -F pe-x86-64 -o $sysoFile 'zz-build-temp.rc'; $code = $LASTEXITCODE } finally { Pop-Location; Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+  if ($code -ne 0) { throw "windres failed for $rcFile" }
+}
+Build-Resource (Join-Path $PSScriptRoot 'app.rc') 'rsrc_windows_amd64.syso' 'KeyClick Tracker' 'KeyClick-Tracker.exe'
 # Output folders (project root\installers): one folder for the setup program, one for the
 # standalone app. Each build replaces the previous file in its folder.
 $instRoot   = Join-Path (Split-Path $PSScriptRoot -Parent) 'installers'
@@ -47,11 +83,7 @@ $standOut = Join-Path $standDir "KeyClick-Tracker-v$ver.exe"
 Copy-Item $payload $standOut -Force
 
 # 2. The setup program (administrator manifest and icon come from installer\setup.rc).
-Push-Location installer
-& $windres -O coff -F pe-x86-64 -o rsrc_windows_amd64.syso setup.rc
-$wr = $LASTEXITCODE
-Pop-Location
-if ($wr -ne 0) { throw 'windres (setup) failed' }
+Build-Resource (Join-Path $PSScriptRoot 'installer\setup.rc') 'rsrc_windows_amd64.syso' 'KeyClick Tracker Setup' 'KeyClick-Tracker-Setup.exe'
 & $goExe build -trimpath -ldflags "-s -w -H windowsgui -X main.version=$ver" -o $Out ./installer
 if ($LASTEXITCODE -ne 0) { throw 'go build (setup) failed' }
 Remove-Item $payload -Force

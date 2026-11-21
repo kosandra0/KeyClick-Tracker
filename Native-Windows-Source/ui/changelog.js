@@ -1,6 +1,17 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.5.0', date: '2026-11-22', title: 'Always opens as a real app: the window component is installed for you, no browser',
+    intro: 'Fixes the first start on a PC that does not have Microsoft\'s WebView2 Runtime (a fresh Windows 10, Windows Sandbox). Nothing about your statistics or settings changes.',
+    items: [
+      ['fixed', 'On a PC without the Microsoft Edge WebView2 Runtime the app used to leave an empty white window and then open its page in your web browser. It no longer does either. KeyClick Tracker is a desktop app and always opens in its own window.'],
+      ['new', 'The setup program now installs the WebView2 Runtime when it is missing (a free Microsoft component, downloaded from Microsoft, its Microsoft signature is checked before it runs). If you start the app without the setup program, the app offers to install it and shows a small progress window. A PC that already has it is not touched.'],
+      ['improved', 'If the runtime cannot be installed (for example the PC is offline) the app says so in plain words, tells you where to get it and exits cleanly, instead of opening a browser. Your data is never touched.'],
+      ['improved', 'The program files now carry proper name and version information (visible under Properties, Details), and the setup program and app are described as KeyClick Tracker there.'],
+      ['changed', 'Windows may still show a blue "Windows protected your PC" (SmartScreen) notice the first time you run the setup program, because the program is not yet signed with a paid code-signing certificate. Click More info, then Run anyway. You can compare the SHA-256 checksum published with the release first.'],
+    ],
+  },
+  {
     version: '2.4.0', date: '2026-11-19', title: 'How long keys and buttons are held, scroll sessions, and an Applications page',
     intro: 'KeyClick Tracker now measures how long each key and mouse button is held, groups scrolling into sessions, and shows what each program received. Your existing statistics are kept. Durations start counting from this version; earlier days show Not recorded.',
     items: [

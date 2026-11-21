@@ -236,7 +236,27 @@ func install(dir string, noStartup, noLaunch, noRegister bool) {
 			box("The program was installed, but start-with-Windows could not be set up. You can turn it on in the app's Settings.", windows.MB_OK|windows.MB_ICONWARNING)
 		}
 	}
-	if !noLaunch {
+	// v2.5.0: the app window needs Microsoft's WebView2 Runtime. Windows 11 and most Windows 10
+	// PCs have it; a fresh Windows 10 and Windows Sandbox do not. The app itself checks, asks
+	// (unless /S), downloads Microsoft's signed installer and installs it.
+	webviewOK := true
+	{
+		args := []string{"--install-webview2"}
+		if silent {
+			args = append(args, "--quiet")
+		}
+		logf("checking the WebView2 Runtime: %s %s", exe, strings.Join(args, " "))
+		c := exec.Command(exe, args...)
+		c.Dir = dir
+		if err := c.Run(); err != nil {
+			webviewOK = false
+			logf("WebView2 Runtime step failed: %v (details: %s\\KeyClickTracker-WebView2.log)", err, os.TempDir())
+			box("The program was installed, but the Microsoft Edge WebView2 Runtime (which draws the app window) could not be installed.\n\n"+
+				"Connect to the internet and start KeyClick Tracker from the Start menu: it will offer to install the runtime then. "+
+				"Log: "+filepath.Join(os.TempDir(), "KeyClickTracker-WebView2.log"), windows.MB_OK|windows.MB_ICONWARNING)
+		}
+	}
+	if !noLaunch && webviewOK {
 		c := exec.Command(exe)
 		c.Dir = dir
 		if err := c.Start(); err != nil {

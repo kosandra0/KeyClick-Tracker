@@ -338,6 +338,10 @@ func (w *webview) CreateWithOptions(opts WindowOptions) bool {
 	_, _, _ = w32.User32SetFocus.Call(w.hwnd)
 
 	if !w.browser.Embed(w.hwnd) {
+		// KeyClick Tracker change: do not leave the empty white window behind when the engine
+		// could not start (for example when the WebView2 Runtime is not installed).
+		_, _, _ = w32.User32DestroyWindow.Call(w.hwnd)
+		w.hwnd = 0
 		return false
 	}
 	w.browser.Resize()

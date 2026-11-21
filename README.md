@@ -6,17 +6,17 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 
 **It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope\activity.json`, and nothing is sent anywhere.
 
-## Latest release: 2.4.0
+## Latest release: 2.5.0
 
-**[Download KeyClick Tracker 2.4.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.4.0)**
+**[Download KeyClick Tracker 2.5.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.5.0)**
 
-- **New: how long keys and mouse buttons are held.** Every key and button is measured from press to release (left and right keys kept apart, auto-repeat ignored). A live **Held right now** panel and live totals count up while you hold. Scrolling is grouped into sessions with an *estimated* time.
-- **New: Applications page.** Which programs received your keys, clicks and scrolls, with their own icons (KeyClick Tracker lists itself too), hold times, a keyboard heat map, mouse buttons and scrolling for each program, and keys and buttons that glow when held.
-- **Improved:** Overview cards show held time, Keyboard and Mouse show held time per key and button, Analytics has an Input duration section, History has held time per period, a day panel and an input history. Numbers roll live and never disappear when you type or click.
-- **Improved:** export and import (JSON, TXT, MD) carry all hold times, scroll sessions, programs and the newest 2,000 individual holds.
-- Your existing data is kept. Hold times are recorded from 2.4.0 on. Checksums are in `SHA256SUMS.txt` and in the release notes.
+- **Fixed: always opens as a real app.** On a PC without Microsoft's WebView2 Runtime (a fresh Windows 10, Windows Sandbox) earlier versions left an empty white window and then opened the app's page in your web browser. That no longer happens. KeyClick Tracker never opens in a browser.
+- **New: the window component is installed for you.** The setup program installs the Microsoft Edge WebView2 Runtime when it is missing (downloaded from Microsoft; Microsoft's signature on the installer is checked before it runs). Starting the app without the setup program offers the same, with a small progress window. A PC that already has the runtime is not touched.
+- **Improved:** if the runtime cannot be installed (for example the PC is offline) the app explains it in plain words and exits cleanly. The program files now carry proper name and version information.
+- **Windows SmartScreen:** the program is not yet signed with a paid code-signing certificate, so Windows may show "Windows protected your PC" the first time you run the setup. See *Download and install* below.
+- Your data is untouched. Checksums are in `SHA256SUMS.txt` and in the release notes.
 
-Earlier releases: [2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0) (Windows and Alt shortcuts counted), [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
+Earlier releases: [2.4.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.4.0) (hold times, scroll sessions, Applications page), [2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0) (Windows and Alt shortcuts counted), [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
 ## Download and install
 
@@ -29,12 +29,14 @@ Two files are published with each release:
 
 Both run with **administrator rights**. This is required so that keys, clicks and scrolls are counted in administrator windows, such as an elevated PowerShell. Windows asks for permission when you open the app by hand. At sign-in it starts without a prompt.
 
-Requirements: Windows 10 or 11, 64-bit. The app uses the Microsoft Edge WebView2 runtime, which is already on most Windows 10 and 11 PCs.
+Requirements: Windows 10 or 11, 64-bit. The app draws its window with the Microsoft Edge WebView2 Runtime, which is already on Windows 11 and most Windows 10 PCs. If it is missing, the setup program (or the app, when started without it) downloads and installs it from Microsoft, which needs an internet connection once.
+
+**"Windows protected your PC" (SmartScreen).** The programs are not yet signed with a paid code-signing certificate, so on first run Windows may show a blue notice saying the publisher is unknown. This is Windows being careful about a new, unsigned program. Compare the SHA-256 checksum below with the one on the release page; if it matches, click **More info**, then **Run anyway**. The source code is in this repository.
 
 **Check the download.** In PowerShell:
 
 ```powershell
-Get-FileHash .\KeyClick-Tracker-Setup-v2.4.0.exe -Algorithm SHA256
+Get-FileHash .\KeyClick-Tracker-Setup-v2.5.0.exe -Algorithm SHA256
 ```
 
 Compare the result with the checksum listed on the release page.
@@ -111,6 +113,7 @@ The build writes `installers\Setup\KeyClick-Tracker-Setup-vX.Y.Z.exe` and `insta
 
 | Version | Date | Highlights |
 |---|---|---|
+| 2.5.0 | 2026-11-22 | Always opens as a real app (no browser, no blank window); installs the WebView2 Runtime when missing; file version information. |
 | 2.4.0 | 2026-11-19 | Hold times for keys and buttons, scroll sessions, Applications page, live numbers, History additions, complete export and import. |
 | 2.3.0 | 2026-11-19 | Windows and Alt shortcut keys counted, scrolls per program, tidier About page. |
 | 2.2.0 | 2026-11-18 | Lite mode for older computers, your logo in Task Manager and the Start menu. |
