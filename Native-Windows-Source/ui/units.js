@@ -1,9 +1,9 @@
 /* Measuring units shared by the main window and the live overlay.
    The server always works in "per minute"; this converts for display only. */
 window.KCU = {
-  FACTOR: { wps: 1 / 60, wpm: 1, wph: 60, cps: 1 / 60, cpm: 1, cph: 60 },
-  LABEL: { wps: 'WPS', wpm: 'WPM', wph: 'WPH', cps: 'CPS', cpm: 'CPM', cph: 'CPH' },
-  NAME: { wps: 'words per second', wpm: 'words per minute', wph: 'words per hour', cps: 'clicks per second', cpm: 'clicks per minute', cph: 'clicks per hour' },
+  FACTOR: { wps: 1 / 60, wpm: 1, wph: 60, cps: 1 / 60, cpm: 1, cph: 60, sps: 1 / 60, spm: 1, sph: 60 },
+  LABEL: { wps: 'WPS', wpm: 'WPM', wph: 'WPH', cps: 'CPS', cpm: 'CPM', cph: 'CPH', sps: 'SPS', spm: 'SPM', sph: 'SPH' },
+  NAME: { wps: 'words per second', wpm: 'words per minute', wph: 'words per hour', cps: 'clicks per second', cpm: 'clicks per minute', cph: 'clicks per hour', sps: 'scrolls per second', spm: 'scrolls per minute', sph: 'scrolls per hour' },
   /* perMinute value -> value in `unit` */
   convert(perMin, unit) { return (Number(perMin) || 0) * (this.FACTOR[unit] || 1); },
   /* decimals to show: `base` is what a per-minute value would use */

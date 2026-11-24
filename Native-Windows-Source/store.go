@@ -15,7 +15,7 @@ import (
 
 const (
 	appName    = "KeyClick Tracker"
-	appVersion = "2.5.0"
+	appVersion = "2.6.0"
 	// The data folder keeps the original name on purpose: users upgrading from
 	// KeyScope 1.x keep their existing activity.json without any migration.
 	dataFolderName = "KeyScope"
@@ -93,26 +93,27 @@ type AppCount struct {
 }
 
 type Settings struct {
-	Theme        string `json:"theme"`
-	Font         string `json:"font"`
-	FontScale    int    `json:"font_scale"` // percent, 85..130
-	Animations   bool   `json:"animations"`
-	LiveNumbers  bool   `json:"live_numbers"`
-	GoalKeys     uint64 `json:"goal_keys"`
-	GoalClicks   uint64 `json:"goal_clicks"`
-	BreakMinutes int    `json:"break_minutes"` // 0 = off
-	StartHidden  bool   `json:"start_hidden"`
-	UserName     string `json:"user_name"`
-	Clock24      bool   `json:"clock_24h"`
-	TypingUnit   string `json:"typing_unit"` // wps | wpm | wph
-	ClickUnit    string `json:"click_unit"`  // cps | cpm | cph
-	OverlayOn    bool   `json:"overlay_on"`
-	OverlaySet   bool   `json:"overlay_set"` // true once the user has positioned the overlay
-	OverlayX     int    `json:"overlay_x"`
-	OverlayY     int    `json:"overlay_y"`
-	OverlayW     int    `json:"overlay_w"`
-	OverlayH     int    `json:"overlay_h"`
-	OverlayTheme string `json:"overlay_theme"` // colour theme of the floating live box, see ui/themes.js KC_OV_THEMES
+	Theme          string `json:"theme"`
+	Font           string `json:"font"`
+	FontScale      int    `json:"font_scale"` // percent, 85..130
+	Animations     bool   `json:"animations"`
+	LiveNumbers    bool   `json:"live_numbers"`
+	GoalKeys       uint64 `json:"goal_keys"`
+	GoalClicks     uint64 `json:"goal_clicks"`
+	BreakMinutes   int    `json:"break_minutes"` // 0 = off
+	StartHidden    bool   `json:"start_hidden"`
+	UserName       string `json:"user_name"`
+	Clock24        bool   `json:"clock_24h"`
+	TypingUnit     string `json:"typing_unit"`      // wps | wpm | wph
+	ClickUnit      string `json:"click_unit"`       // cps | cpm | cph
+	ScrollRateUnit string `json:"scroll_rate_unit"` // v2.6.0: sps | spm | sph (scroll events per second, minute, hour)
+	OverlayOn      bool   `json:"overlay_on"`
+	OverlaySet     bool   `json:"overlay_set"` // true once the user has positioned the overlay
+	OverlayX       int    `json:"overlay_x"`
+	OverlayY       int    `json:"overlay_y"`
+	OverlayW       int    `json:"overlay_w"`
+	OverlayH       int    `json:"overlay_h"`
+	OverlayTheme   string `json:"overlay_theme"` // colour theme of the floating live box, see ui/themes.js KC_OV_THEMES
 	// v2.1.0 addition: file name of the chosen logo in ui/logos ("" = default). Optional.
 	AppLogo string `json:"app_logo,omitempty"`
 	// v2.2.0 addition: Lite mode lowers CPU and memory use (no animations or effects, a lighter
@@ -153,7 +154,7 @@ type Settings struct {
 
 func defaultSettings() *Settings {
 	return &Settings{Theme: "classic", Font: "segoe", FontScale: 100, Animations: true, LiveNumbers: true, GoalKeys: 8000, GoalClicks: 1500,
-		Clock24: false, TypingUnit: "wpm", ClickUnit: "cpm", OverlayW: 250, OverlayH: 92, OverlayTheme: "ink", IdleMinutes: 5}
+		Clock24: false, TypingUnit: "wpm", ClickUnit: "cpm", ScrollRateUnit: "sps", OverlayW: 330, OverlayH: 92, OverlayTheme: "ink", IdleMinutes: 5}
 }
 
 type Store struct {
@@ -178,6 +179,7 @@ type minuteAcc struct {
 type ringSlot struct {
 	sec                int64
 	chars, clicks, key uint64
+	scroll             uint64 // v2.6.0: scroll events in this second (for the scroll rate)
 }
 
 // pendingDelta is what has happened since the last live frame was pushed.
@@ -311,6 +313,11 @@ func (s *Store) normalize() {
 	default:
 		st.ClickUnit = "cpm"
 	}
+	switch st.ScrollRateUnit {
+	case "sps", "spm", "sph":
+	default:
+		st.ScrollRateUnit = "sps"
+	}
 	if r := []rune(strings.TrimSpace(st.UserName)); len(r) > 32 {
 		st.UserName = string(r[:32])
 	} else {
@@ -322,10 +329,12 @@ func (s *Store) normalize() {
 	if !validLogo(st.AppLogo) {
 		st.AppLogo = "" // an unknown logo name falls back to the default
 	}
-	if st.OverlayW < 150 || st.OverlayW > 900 {
+	// v2.5.1: the minimum is 170 x 72 dip (ovMinW/ovMinH). A saved flat box (56 px high) was
+	// accepted before and its numbers clipped, so smaller saved sizes are reset here.
+	if st.OverlayW < ovMinW || st.OverlayW > 900 {
 		st.OverlayW = 250
 	}
-	if st.OverlayH < 56 || st.OverlayH > 500 {
+	if st.OverlayH < ovMinH || st.OverlayH > 500 {
 		st.OverlayH = 92
 	}
 	// v2.0.0 (B14): goals were not range-checked before. Keep them at sane values.
@@ -356,7 +365,7 @@ func (s *Store) normalize() {
 		st.OverlayPreset = "detailed"
 	}
 	for k, sz := range st.OverlaySizes {
-		if (k != "compact" && k != "detailed" && k != "sparkline") || sz[0] < 150 || sz[0] > 900 || sz[1] < 56 || sz[1] > 500 {
+		if (k != "compact" && k != "detailed" && k != "sparkline") || sz[0] < ovMinW || sz[0] > 900 || sz[1] < ovMinH || sz[1] > 500 {
 			delete(st.OverlaySizes, k)
 		}
 	}
@@ -457,7 +466,7 @@ func record(kind, id string, units uint64) {
 		pend.ScIDs[id]++
 	}
 	addAppInputLocked(now, kind, id) // v2.0.0 (F1): credit the focused program (no-op when tracking is off)
-	addLayoutInputLocked(now, kind) // v2.0.0 (F14): credit the keyboard layout in use
+	addLayoutInputLocked(now, kind)  // v2.0.0 (F14): credit the keyboard layout in use
 	if cur.keys+cur.clicks+cur.scroll == 0 {
 		sessActive++
 	}
@@ -477,6 +486,7 @@ func record(kind, id string, units uint64) {
 	slot.chars += chars
 	slot.clicks += clicks
 	slot.key += keys
+	slot.scroll += scrolls
 	dirty.Store(true)
 	storeMu.Unlock()
 	select {
@@ -591,6 +601,29 @@ func liveRates(now time.Time) (wpm, cpm, kpm float64) {
 		span = 3
 	}
 	return float64(chars) * 60 / 5 / span, float64(clicks) * 60 / span, float64(keys) * 60 / span
+}
+
+// liveScrollPerMin is the scroll rate over the same last-10-seconds window as liveRates,
+// in scroll events per minute (v2.6.0). The app converts it to per second or per hour.
+func liveScrollPerMin(now time.Time) float64 {
+	storeMu.RLock()
+	defer storeMu.RUnlock()
+	sec := now.Unix()
+	var scrolls uint64
+	oldest := sec
+	for _, s := range ring {
+		if s.sec > sec-10 && s.sec <= sec && s.scroll > 0 {
+			scrolls += s.scroll
+			if s.sec < oldest {
+				oldest = s.sec
+			}
+		}
+	}
+	span := float64(sec - oldest + 1)
+	if span < 3 {
+		span = 3
+	}
+	return float64(scrolls) * 60 / span
 }
 
 // ---------------------------------------------------------------- persistence

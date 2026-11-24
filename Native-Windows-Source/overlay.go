@@ -33,6 +33,8 @@ var (
 const (
 	ovIdleAlpha  = 175 // a little see-through while the pointer is elsewhere
 	ovHoverAlpha = 255
+	ovMinW       = 170 // v2.5.1: smallest live box size in dip; the layouts need this much room
+	ovMinH       = 72
 	wsPopup      = 0x80000000
 	wsExTopmost  = 0x00000008
 	wsExTool     = 0x00000080
@@ -135,7 +137,7 @@ func overlayProc(h, msg, wp, lp uintptr) uintptr {
 	case wmGetMinMax:
 		mm := (*minMaxInfo)(unsafe.Pointer(lp))
 		s := int32(dpiOf(h))
-		mm.MinTrack = point{X: 150 * s / 96, Y: 56 * s / 96}
+		mm.MinTrack = point{X: ovMinW * s / 96, Y: ovMinH * s / 96} // v2.5.1: a flat box clipped its numbers
 		mm.MaxTrack = point{X: 900 * s / 96, Y: 500 * s / 96}
 	case wmClose:
 		hideOverlay(true)

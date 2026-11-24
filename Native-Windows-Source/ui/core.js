@@ -18,8 +18,8 @@
   KC.state = {
     page: 'overview', range: 'last7', unit: 'daily', from: '', to: '', chartMode: 'events',
     stats: null, all: null, status: null,
-    settings: { theme: 'classic', font: 'segoe', font_scale: 100, animations: true, live_numbers: true, goal_keys: 8000, goal_clicks: 1500, break_minutes: 0, user_name: '', clock_24h: false, typing_unit: 'wpm', click_unit: 'cpm', overlay_on: false },
-    live: { wpm: 0, cpm: 0, kpm: 0 },
+    settings: { theme: 'classic', font: 'segoe', font_scale: 100, animations: true, live_numbers: true, goal_keys: 8000, goal_clicks: 1500, break_minutes: 0, user_name: '', clock_24h: false, typing_unit: 'wpm', click_unit: 'cpm', scroll_rate_unit: 'sps', overlay_on: false },
+    live: { wpm: 0, cpm: 0, kpm: 0, spm: 0 },
     xp: { level: 1, title: 'Newcomer', pct: 0, events: 0, next: 60 },
     collapsed: false, calMonth: new Date(), calStats: null
   };
@@ -131,7 +131,8 @@
   /* ---------- odometer bindings ---------- */
   const odos = new WeakMap();
   const getPath = p => p.split('.').reduce((o, k) => (o == null ? o : o[k]), state);
-  const unitOf = k => (k === 'w' ? state.settings.typing_unit : state.settings.click_unit) || (k === 'w' ? 'wpm' : 'cpm');
+  /* k: 'w' typing, 'c' clicks, 's' scroll rate (v2.6.0, sps/spm/sph) */
+  const unitOf = k => (k === 'w' ? state.settings.typing_unit : k === 's' ? state.settings.scroll_rate_unit : state.settings.click_unit) || (k === 'w' ? 'wpm' : k === 's' ? 'sps' : 'cpm');
   KC.unitLabel = k => KCU.LABEL[unitOf(k)];
   KC.unitName = k => KCU.NAME[unitOf(k)];
   KC.rate = (perMin, k, base) => KCU.format(perMin, unitOf(k), base || 0);
@@ -318,15 +319,15 @@
   let lastFrameAt = Date.now();
   setInterval(() => {
     const l = state.live;
-    if (Date.now() - lastFrameAt > 5000 && l && (l.wpm || l.cpm || l.kpm)) {
-      state.live = { wpm: 0, cpm: 0, kpm: 0 };
+    if (Date.now() - lastFrameAt > 5000 && l && (l.wpm || l.cpm || l.kpm || l.spm)) {
+      state.live = { wpm: 0, cpm: 0, kpm: 0, spm: 0 };
       const chip = $('#live-chip'); if (chip) chip.classList.remove('active');
       KC.schedulePaint();
     }
   }, 1000);
   function onFrame(f) {
     lastFrameAt = Date.now();
-    state.live = { wpm: f.wpm || 0, cpm: f.cpm || 0, kpm: f.kpm || 0 };
+    state.live = { wpm: f.wpm || 0, cpm: f.cpm || 0, kpm: f.kpm || 0, spm: f.spm || 0 };
     $('#live-chip').classList.toggle('active', (f.wpm || 0) + (f.cpm || 0) > 0);
     const any = (f.k || 0) + (f.c || 0) + (f.s || 0);
     KC.glow(f);

@@ -383,8 +383,8 @@ func TestOverlayPresetKeepsPerPresetSize(t *testing.T) {
 	next := *old
 	next.OverlayPreset = "compact"
 	applyOverlayPreset(old, &next)
-	if next.OverlayW != 220 || next.OverlayH != 60 {
-		t.Fatalf("compact first size = %dx%d, want 220x60", next.OverlayW, next.OverlayH)
+	if next.OverlayW != 220 || next.OverlayH != 72 { // v2.5.1: compact default raised from 60 to 72 dip
+		t.Fatalf("compact first size = %dx%d, want 220x72", next.OverlayW, next.OverlayH)
 	}
 	if got := next.OverlaySizes["detailed"]; got != [2]int{300, 110} {
 		t.Fatalf("detailed size not remembered: %v", got)

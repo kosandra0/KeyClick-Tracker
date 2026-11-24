@@ -20,7 +20,8 @@ html,body{margin:0;height:100%;overflow:hidden;background:var(--ov-bottom);color
 .x svg{width:6px;height:6px;fill:none;stroke:rgba(0,0,0,.6);stroke-width:1.8;stroke-linecap:round}
 .ov:hover .x{opacity:1;transform:none}
 .x:hover{filter:brightness(1.1)}
-.grip{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;opacity:0;transition:opacity .25s}
+/* v2.5.1: the resize grip stays faintly visible so it can always be found */
+.grip{position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;opacity:.4;transition:opacity .25s}
 .grip::after{content:"";position:absolute;right:7px;bottom:7px;width:8px;height:8px;border-right:2px solid var(--ov-muted);border-bottom:2px solid var(--ov-muted);border-radius:0 0 3px 0}
 .ov:hover .grip{opacity:.8}
 

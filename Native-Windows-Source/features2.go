@@ -326,7 +326,7 @@ func displaysJSON() map[string]any {
 // ------------------------------------------------------------------ F13 live box presets
 
 // presetDefaults are the first sizes of each preset (width, height in dip).
-var presetDefaults = map[string][2]int{"compact": {220, 60}, "detailed": {250, 92}, "sparkline": {260, 120}}
+var presetDefaults = map[string][2]int{"compact": {220, 72}, "detailed": {330, 92}, "sparkline": {260, 120}}
 
 // applyOverlayPreset runs when settings are saved. When the preset changes, the size the box
 // has now is remembered for the old preset and the new preset's own size is applied. Position

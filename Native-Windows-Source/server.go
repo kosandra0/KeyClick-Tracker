@@ -66,6 +66,7 @@ type liveFrame struct {
 	WPM    float64 `json:"wpm"`
 	CPM    float64 `json:"cpm"`
 	KPM    float64 `json:"kpm"`
+	SPM    float64 `json:"spm"` // v2.6.0: scroll events per minute (last ~10 s)
 	Paused bool    `json:"p"`
 }
 
@@ -81,7 +82,7 @@ func liveShouldSend(w, c, lastW, lastC float64, sinceLast time.Duration) bool {
 // currentLiveFrame builds the JSON of a live frame with the speeds as they are now.
 func currentLiveFrame(d pendingDelta) (b []byte, wpm, cpm float64) {
 	w, c, k := liveRates(time.Now())
-	b, _ = json.Marshal(liveFrame{d, w, c, k, isPaused()})
+	b, _ = json.Marshal(liveFrame{d, w, c, k, liveScrollPerMin(time.Now()), isPaused()})
 	return b, w, c
 }
 

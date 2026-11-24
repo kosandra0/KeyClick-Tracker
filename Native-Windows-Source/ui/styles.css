@@ -157,7 +157,7 @@ html.no-anim *,html.no-anim *::before,html.no-anim *::after{animation:none !impo
 @keyframes nudge{40%{transform:translateY(-1px)}}
 
 /* ---------- speed ---------- */
-.speed-row{display:grid;grid-template-columns:1.1fr 1.1fr 1.4fr;gap:14px;margin-top:14px}
+.speed-row{display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:14px;margin-top:14px}
 .speed-big{display:flex;flex-direction:column;gap:4px}
 .speed-big .num{font-size:3em;font-weight:600;letter-spacing:-1.5px;line-height:1.15;display:flex}
 .speed-big .unit{font-size:.78em;letter-spacing:1.2px;color:var(--muted);text-transform:uppercase;font-weight:650}

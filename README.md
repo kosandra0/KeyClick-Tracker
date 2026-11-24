@@ -6,17 +6,17 @@ _A quiet, private Windows app that counts your key presses, mouse clicks and scr
 
 **It only stores counts.** It never records what you type, where your cursor goes, or any text. Everything stays on your computer in `%LOCALAPPDATA%\KeyScope\activity.json`, and nothing is sent anywhere.
 
-## Latest release: 2.5.0
+## Latest release: 2.6.0
 
-**[Download KeyClick Tracker 2.5.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.5.0)**
+**[Download KeyClick Tracker 2.6.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.6.0)**
 
-- **Fixed: always opens as a real app.** On a PC without Microsoft's WebView2 Runtime (a fresh Windows 10, Windows Sandbox) earlier versions left an empty white window and then opened the app's page in your web browser. That no longer happens. KeyClick Tracker never opens in a browser.
-- **New: the window component is installed for you.** The setup program installs the Microsoft Edge WebView2 Runtime when it is missing (downloaded from Microsoft; Microsoft's signature on the installer is checked before it runs). Starting the app without the setup program offers the same, with a small progress window. A PC that already has the runtime is not touched.
-- **Improved:** if the runtime cannot be installed (for example the PC is offline) the app explains it in plain words and exits cleanly. The program files now carry proper name and version information.
-- **Windows SmartScreen:** the program is not yet signed with a paid code-signing certificate, so Windows may show "Windows protected your PC" the first time you run the setup. See *Download and install* below.
+- **New: scroll rate.** The Speed page has a "Scroll rate now" card, and the floating live box shows a third figure beside WPM and CPM. Both count scroll events over the last few seconds.
+- **New: scroll unit in Settings.** Settings > Measuring units > Scroll rate chooses SPS (scrolls per second), SPM (per minute) or SPH (per hour). It applies to the app and the floating live box.
+- **Fixed: the floating live box can no longer be dragged flat.** It used to be possible to make it 56 pixels high, which cut off its numbers. The smallest size is now 170 × 72 pixels, and a box saved that flat is reset to a usable size on startup. The resize handle stays visible.
+- **Changed:** the detailed live box starts 330 pixels wide to fit the third figure.
 - Your data is untouched. Checksums are in `SHA256SUMS.txt` and in the release notes.
 
-Earlier releases: [2.4.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.4.0) (hold times, scroll sessions, Applications page), [2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0) (Windows and Alt shortcuts counted), [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
+Earlier releases: [2.5.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.5.0) (always opens as a real app, installs the WebView2 Runtime when missing), [2.4.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.4.0) (hold times, scroll sessions, Applications page), [2.3.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.3.0) (Windows and Alt shortcuts counted), [2.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.2.0) (Lite mode, logo everywhere), [2.1.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.1.0) (choose your app logo), [2.0.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v2.0.0) (tray menu, reminders, summaries, practice), [1.2.3](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.3) (live box stays on screen), [1.2.2](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.2) (administrator counting, sign-in start, setup program) and [1.2.0](https://github.com/kosandra0/KeyClick-Tracker/releases/tag/v1.2.0) (Analytics and live box themes).
 
 ## Download and install
 
@@ -36,7 +36,7 @@ Requirements: Windows 10 or 11, 64-bit. The app draws its window with the Micros
 **Check the download.** In PowerShell:
 
 ```powershell
-Get-FileHash .\KeyClick-Tracker-Setup-v2.5.0.exe -Algorithm SHA256
+Get-FileHash .\KeyClick-Tracker-Setup-v2.6.0.exe -Algorithm SHA256
 ```
 
 Compare the result with the checksum listed on the release page.
@@ -63,12 +63,12 @@ Compare the result with the checksum listed on the release page.
 - **Scroll sessions:** wheel events less than 0.4 seconds apart form a session; its time is an estimate from the gaps between wheel events and is labelled that way.
 - **Applications:** the programs that received your input, with icons, counts, hold times and a per-program keyboard heat map and mouse buttons.
 - **Keys and buttons that glow** while held or pressed.
-- **Speed:** typing speed (WPS, WPM, WPH) and clicking speed (CPS, CPM, CPH), live and per period.
+- **Speed:** typing speed (WPS, WPM, WPH), clicking speed (CPS, CPM, CPH) and scroll rate (SPS, SPM, SPH), live and per period. Choose the units in Settings > Measuring units.
 - **Overview, Keyboard, Mouse, Speed and History pages:** heat maps, goals, streaks and milestones.
 - **Analytics:** activity bars from hourly to yearly, a trend line with a moving average, an hourly rhythm and 24-hour clock, a weekly rhythm, an hour-by-weekday heat map, a year-of-days calendar, an activity mix, and a breakdown of how you type.
 - **Insight engine:** plain-language findings about your habits, such as your pace today against a normal day, your sharpest three hours, consistency, week-on-week momentum and unusual days. It shows a dash until it has enough history to be sure.
 - **Four scores:** activity score, consistency, momentum and a projected total for today.
-- **Floating live box:** always on top, resizable, draggable, with ten themes and its own position memory. It is repaired automatically if it ends up off-screen.
+- **Floating live box:** always on top, resizable (not below 170 × 72 pixels), draggable, showing WPM, CPM and scroll rate, with ten themes and its own position memory. It is repaired automatically if it ends up off-screen.
 - **Activity glow:** the stat boxes light up when they change (keys in blue, clicks in lilac, scrolls in green).
 - **Appearance:** app themes, ten official typefaces (Times New Roman, Arial, Calibri, Cambria, Georgia, Book Antiqua, Palatino Linotype, Verdana, Tahoma, Comic Sans MS), and other font families.
 - **Break reminder:** after a long stretch of continuous activity, a gentle tray notification suggests a short break.
@@ -113,6 +113,7 @@ The build writes `installers\Setup\KeyClick-Tracker-Setup-vX.Y.Z.exe` and `insta
 
 | Version | Date | Highlights |
 |---|---|---|
+| 2.6.0 | 2026-11-24 | Scroll rate (SPS, SPM, SPH) on the Speed page and in the floating live box, with a unit setting; the floating live box can no longer be dragged flat. |
 | 2.5.0 | 2026-11-22 | Always opens as a real app (no browser, no blank window); installs the WebView2 Runtime when missing; file version information. |
 | 2.4.0 | 2026-11-19 | Hold times for keys and buttons, scroll sessions, Applications page, live numbers, History additions, complete export and import. |
 | 2.3.0 | 2026-11-19 | Windows and Alt shortcut keys counted, scrolls per program, tidier About page. |

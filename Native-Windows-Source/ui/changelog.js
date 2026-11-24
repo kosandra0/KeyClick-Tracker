@@ -1,6 +1,18 @@
 /* Update log shown in the app. Newest first. Add a new entry on every release. */
 window.KC_CHANGELOG = [
   {
+    version: '2.6.0', date: '2026-11-24', title: 'Scroll rate in the app and the floating box, and a flat live box fixed',
+    intro: 'Adds how fast you scroll (scroll events per second, minute or hour), with a unit you choose in Settings. Also fixes a floating live box that could be dragged too small. Your statistics and settings are kept.',
+    items: [
+      ['new', 'Scroll rate: the Speed page has a new "Scroll rate now" card, and the floating live box shows a third figure beside WPM and CPM. It counts scroll events over the last few seconds, like the typing speed.'],
+      ['new', 'Settings > Measuring units has a new "Scroll rate" choice: SPS (scrolls per second), SPM (per minute) or SPH (per hour). It applies everywhere: the app and the floating live box.'],
+      ['fixed', 'The floating live box could be dragged to 56 pixels high, which cut off its numbers and made it hard to grow back. The smallest size is now 170 x 72 pixels (scaled for your screen), and the window will not shrink below it.'],
+      ['fixed', 'A live box that was already saved too flat is reset to a usable size the next time the app starts. Its position is kept.'],
+      ['improved', 'The resize handle in the bottom-right corner of the live box is always faintly visible, so it can be found again. Drag it to resize.'],
+      ['changed', 'New default sizes: the detailed live box starts wider (330 pixels) to fit the scroll figure, and the compact style starts at 220 x 72.'],
+    ],
+  },
+  {
     version: '2.5.0', date: '2026-11-22', title: 'Always opens as a real app: the window component is installed for you, no browser',
     intro: 'Fixes the first start on a PC that does not have Microsoft\'s WebView2 Runtime (a fresh Windows 10, Windows Sandbox). Nothing about your statistics or settings changes.',
     items: [
